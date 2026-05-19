@@ -3,6 +3,7 @@ package com.snapsort.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.snapsort.app.ui.navigation.SnapSortApp
 import com.snapsort.app.ui.theme.SnapSortTheme
 
 class MainActivity : ComponentActivity() {
@@ -10,7 +11,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             SnapSortTheme {
-                // MainApp() will go here
+                SnapSortApp()
             }
         }
     }
