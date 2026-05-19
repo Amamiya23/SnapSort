@@ -10,10 +10,10 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun ScanProgressScreen(
-    currentStage: String,
-    currentProgress: Int,
-    totalItems: Int,
-    onCancel: () -> Unit,
+    currentStage: String = "Matching RAW files",
+    currentProgress: Int = 150,
+    totalItems: Int = 500,
+    onCancel: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val progress = if (totalItems > 0) currentProgress.toFloat() / totalItems.toFloat() else 0f
