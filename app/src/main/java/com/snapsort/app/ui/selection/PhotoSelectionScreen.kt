@@ -58,8 +58,13 @@ fun PhotoSelectionScreen(
     val currentPhoto = group.photos.getOrNull(pagerState.currentPage)
     val isMarkedForDeletion = currentPhoto?.markedForDeletion ?: false
 
+    var showOverlay by remember { mutableStateOf(true) }
+    val systemBarsColor = Color.Black.copy(alpha = 0.6f)
+
     Scaffold(
+        containerColor = Color.Black,
         topBar = {
+            if (showOverlay) {
             TopAppBar(
                 title = {
                     Column {
@@ -82,12 +87,17 @@ fun PhotoSelectionScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                    containerColor = systemBarsColor,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White,
+                    actionIconContentColor = Color.White
                 )
             )
+            }
         },
         bottomBar = {
-            BottomAppBar {
+            if (showOverlay) {
+            BottomAppBar(containerColor = systemBarsColor) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -103,7 +113,7 @@ fun PhotoSelectionScreen(
                         },
                         enabled = pagerState.currentPage > 0
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "上一张")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "上一张", tint = Color.White)
                     }
 
                     Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -148,15 +158,15 @@ fun PhotoSelectionScreen(
                         },
                         enabled = pagerState.currentPage < group.photos.size - 1
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "下一张")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "下一张", tint = Color.White)
                     }
                 }
             }
+            }
         }
-    ) { paddingValues ->
+    ) { _ ->
         Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)) {
+            .fillMaxSize()) {
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize()
@@ -165,44 +175,31 @@ fun PhotoSelectionScreen(
                 val isDeleted = photo.markedForDeletion
                 
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                        .pointerInput(photo.id, state.gestureShortcutEnabled) {
-                            if (!state.gestureShortcutEnabled) return@pointerInput
-                            detectVerticalDragGestures(
-                                onDragStart = { dragOffsetY = 0f },
-                                onVerticalDrag = { change, dragAmount ->
-                                    change.consume()
-                                    dragOffsetY += dragAmount
-                                },
-                                onDragEnd = {
-                                    val shouldTrigger = abs(dragOffsetY) >= gestureThreshold
-                                    if (shouldTrigger) {
-                                        if (dragOffsetY > 0f) {
-                                            viewModel.markForDeletion(photo.id)
-                                            if (pagerState.currentPage < group.photos.size - 1) {
-                                                coroutineScope.launch {
-                                                    pagerState.animateScrollToPage(pagerState.currentPage + 1)
-                                                }
-                                            }
-                                        } else {
-                                            viewModel.cancelDeleteMarker(photo.id)
-                                        }
-                                    }
-                                    dragOffsetY = 0f
-                                },
-                                onDragCancel = { dragOffsetY = 0f }
-                            )
-                        }
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    AsyncImage(
+                    com.snapsort.app.ui.components.ZoomableImage(
                         model = photo.uri,
-                        contentDescription = null,
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit
+                        onTap = { showOverlay = !showOverlay },
+                        onSwipeProgress = { if (state.gestureShortcutEnabled) dragOffsetY = it },
+                        onSwipeEnd = {
+                            if (!state.gestureShortcutEnabled) return@ZoomableImage
+                            val shouldTrigger = abs(it) >= gestureThreshold
+                            if (shouldTrigger) {
+                                if (it > 0f) {
+                                    viewModel.markForDeletion(photo.id)
+                                    if (pagerState.currentPage < group.photos.size - 1) {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                        }
+                                    }
+                                } else {
+                                    viewModel.cancelDeleteMarker(photo.id)
+                                }
+                            }
+                            dragOffsetY = 0f
+                        }
                     )
 
                     val gestureText = when {
@@ -215,7 +212,8 @@ fun PhotoSelectionScreen(
                         Surface(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
-                                .padding(top = 18.dp)
+                                .windowInsetsPadding(WindowInsets.systemBars)
+                                .padding(top = 80.dp)
                                 .alpha((abs(dragOffsetY) / gestureThreshold).coerceIn(0.35f, 1f)),
                             shape = RoundedCornerShape(8.dp),
                             color = MaterialTheme.colorScheme.inverseSurface
@@ -239,7 +237,8 @@ fun PhotoSelectionScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(16.dp),
+                                .windowInsetsPadding(WindowInsets.systemBars)
+                                .padding(top = 64.dp, end = 16.dp),
                             contentAlignment = Alignment.TopEnd
                         ) {
                             Surface(
