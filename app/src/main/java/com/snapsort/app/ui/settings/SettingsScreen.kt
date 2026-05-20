@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.snapsort.app.SnapSortDependencies
 import com.snapsort.app.core.SortDirection
+import com.snapsort.app.data.settings.ThemeMode
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -133,10 +134,29 @@ fun SettingsScreen(
             item {
                 SettingSection(title = "主题") {
                     Text(
-                        text = "跟随系统浅色或深色主题，第一版不提供强制切换。",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "选择适合筛选环境的界面外观。",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        val themeOptions = listOf(
+                            ThemeMode.SYSTEM to "跟随系统",
+                            ThemeMode.LIGHT to "浅色",
+                            ThemeMode.DARK to "深色"
+                        )
+                        themeOptions.forEach { (mode, label) ->
+                            FilterChip(
+                                selected = settings.themeMode == mode,
+                                onClick = { viewModel.setThemeMode(mode) },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
                 }
             }
         }
