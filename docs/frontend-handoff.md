@@ -33,6 +33,7 @@
 14. 已接入 Android `MediaStore.createDeleteRequest` 系统删除授权入口；授权返回后会尝试打开原 URI 校准删除结果，成功删除的 JPG 从 Room 移除，失败项保留标记。
 15. 2026-05-20 真机测试发现 SAF Document URI 传入 `MediaStore.createDeleteRequest` 时可能不会弹出系统确认框；已增加 `DocumentFile.fromSingleUri(...).delete()` 回退删除路径，并通过 `SnapSortDelete` tag 输出删除日志。
 16. 2026-05-20 进行了全面的 UI 体验审查和改进。提升 Typography 对比度；主题去掉了默认 Material Purple，改用与摄影场景更协调的低饱和度 Slate 配色方案；优化删除确认 Sheet 排版；特别是选片界面的已删除标记由 58% 透明度全屏遮黑优化为了仅包含浅红色微底与右上方提示气泡，保证删除后仍能识别图片细节。代码完全编译通过且单元测试通过。
+17. 2026-05-20 在 `MainActivity` 中启用了 Android 15 级别的 edge-to-edge (沉浸式状态栏/导航栏) 支持，并在各页面适配了 WindowInsets；同时在设置页中添加了 `ThemeMode`（跟随系统/浅色/深色）的手动主题切换功能。
 
 核心产品和交互依据见：`docs/superpowers/specs/2026-05-19-snapsort-design.md`。
 
