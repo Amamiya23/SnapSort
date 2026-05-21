@@ -11,4 +11,12 @@ AGENTS.md
 .impeccable.md
 opencode.json
 PRODUCT.md
+#测试生成的文件
 *.hprof
+
+#签名app
+keystore.properties
+*.jks
+*.keystore
+app-release-aligned.apk.idsig
+app-release-aligned.apk

@@ -1,8 +1,19 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
 }
+
+val releaseKeystorePropertiesFile = rootProject.file("keystore.properties")
+val releaseKeystoreProperties = Properties().apply {
+    if (releaseKeystorePropertiesFile.exists()) {
+        releaseKeystorePropertiesFile.inputStream().use(::load)
+    }
+}
+val hasReleaseSigningConfig = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    .all { !releaseKeystoreProperties.getProperty(it).isNullOrBlank() }
 
 android {
     namespace = "com.snapsort.app"
@@ -22,6 +33,25 @@ android {
     
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigningConfig) {
+            create("release") {
+                storeFile = rootProject.file(releaseKeystoreProperties.getProperty("storeFile"))
+                storePassword = releaseKeystoreProperties.getProperty("storePassword")
+                keyAlias = releaseKeystoreProperties.getProperty("keyAlias")
+                keyPassword = releaseKeystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (hasReleaseSigningConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
 
     compileOptions {
