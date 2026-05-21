@@ -1,0 +1,14 @@
+.gradle/
+build/
+app/build/
+local.properties
+app/schemas/
+#ai配置
+.impeccable/
+.opencode/
+docs/
+AGENTS.md
+.impeccable.md
+opencode.json
+PRODUCT.md
+*.hprof

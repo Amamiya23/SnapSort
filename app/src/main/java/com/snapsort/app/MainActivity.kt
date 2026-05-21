@@ -27,10 +27,11 @@ class MainActivity : ComponentActivity() {
             val isDarkTheme = when (settings.themeMode) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
-                ThemeMode.SYSTEM -> isSystemDark
+                ThemeMode.SYSTEM, ThemeMode.DYNAMIC -> isSystemDark
             }
+            val useDynamicColor = settings.themeMode == ThemeMode.DYNAMIC
 
-            SnapSortTheme(darkTheme = isDarkTheme) {
+            SnapSortTheme(darkTheme = isDarkTheme, dynamicColor = useDynamicColor) {
                 SnapSortApp()
             }
         }

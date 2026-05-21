@@ -51,63 +51,69 @@ fun ScanProgressScreen(
     val currentFileName = state.currentFileName
     val progress = if (totalItems > 0) currentProgress.toFloat() / totalItems.toFloat() else 0f
 
-    Column(
+    Surface(
         modifier = modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.systemBars)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        CircularProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.size(80.dp),
-            strokeWidth = 6.dp
-        )
-        
-        Spacer(modifier = Modifier.height(32.dp))
-        
-        Text(
-            text = currentStage,
-            style = MaterialTheme.typography.titleLarge,
-            color = if (state.errorMessage == null) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.error
-            },
-            textAlign = TextAlign.Center
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Text(
-            text = "已处理 $currentProgress / $totalItems",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = currentFileName.ifBlank { "等待文件夹授权" },
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        
-        Spacer(modifier = Modifier.height(48.dp))
-        
-        OutlinedButton(
-            onClick = {
-                viewModel.cancelScan()
-                onCancel()
-            },
-            modifier = Modifier.fillMaxWidth(0.6f)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.systemBars)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text("取消扫描")
+            CircularProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.size(80.dp),
+                strokeWidth = 6.dp
+            )
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Text(
+                text = currentStage,
+                style = MaterialTheme.typography.titleLarge,
+                color = if (state.errorMessage == null) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+                textAlign = TextAlign.Center
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "已处理 $currentProgress / $totalItems",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = currentFileName.ifBlank { "等待文件夹授权" },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            OutlinedButton(
+                onClick = {
+                    viewModel.cancelScan()
+                    onCancel()
+                },
+                modifier = Modifier.fillMaxWidth(0.6f)
+            ) {
+                Text("取消扫描")
+            }
         }
     }
 }

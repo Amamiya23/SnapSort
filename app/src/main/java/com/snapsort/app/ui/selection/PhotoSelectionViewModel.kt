@@ -1,61 +1,93 @@
 package com.snapsort.app.ui.selection
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.snapsort.app.data.db.PhotoEntity
+import com.snapsort.app.data.repository.TaskRepository
+import com.snapsort.app.data.settings.UserSettingsRepository
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-data class PhotoMock(
+data class PhotoSelectionItem(
     val id: String,
+    val uri: String,
     val timestamp: String,
-    val isRaw: Boolean,
-    val color: Long // Hex color for placeholder
+    val hasRaw: Boolean,
+    val markedForDeletion: Boolean
 )
 
-data class PhotoGroupMock(
+data class PhotoSelectionGroup(
     val id: String,
     val title: String,
-    val photos: List<PhotoMock>
+    val photos: List<PhotoSelectionItem>
 )
 
 data class PhotoSelectionState(
-    val currentGroup: PhotoGroupMock? = null,
-    val markedForDeletionIds: Set<String> = emptySet(),
-    val currentIndex: Int = 0
+    val currentGroup: PhotoSelectionGroup? = null,
+    val currentIndex: Int = 0,
+    val gestureShortcutEnabled: Boolean = true
 )
 
-class PhotoSelectionViewModel : ViewModel() {
-
-    private val _state = MutableStateFlow(PhotoSelectionState())
-    val state: StateFlow<PhotoSelectionState> = _state.asStateFlow()
-
-    init {
-        // Load mock data
-        val mockPhotos = listOf(
-            PhotoMock("1", "10:42 AM", true, 0xFFE57373),
-            PhotoMock("2", "10:42 AM", true, 0xFF81C784),
-            PhotoMock("3", "10:43 AM", false, 0xFF64B5F6),
-            PhotoMock("4", "10:43 AM", false, 0xFFFFD54F),
-            PhotoMock("5", "10:44 AM", true, 0xFFBA68C8)
+class PhotoSelectionViewModel(
+    private val groupId: String,
+    private val taskRepository: TaskRepository,
+    userSettingsRepository: UserSettingsRepository
+) : ViewModel() {
+    val state: StateFlow<PhotoSelectionState> = combine(
+        taskRepository.observePhotosForGroup(groupId),
+        userSettingsRepository.settings
+    ) { photos, settings ->
+        PhotoSelectionState(
+            currentGroup = PhotoSelectionGroup(
+                id = groupId,
+                title = if (groupId.startsWith("burst")) "连拍" else "散片",
+                photos = photos.map { it.toUiPhoto() }
+            ),
+            gestureShortcutEnabled = settings.gestureShortcutEnabled
         )
-        val mockGroup = PhotoGroupMock("g1", "Burst", mockPhotos)
-        _state.value = PhotoSelectionState(currentGroup = mockGroup)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = PhotoSelectionState()
+    )
+
+    fun markForDeletion(photoId: String) {
+        viewModelScope.launch { taskRepository.setMarkedForDeletion(photoId, true) }
     }
 
-    fun toggleDeleteMarker(photoId: String) {
-        _state.update { currentState ->
-            val newMarkers = currentState.markedForDeletionIds.toMutableSet()
-            if (newMarkers.contains(photoId)) {
-                newMarkers.remove(photoId)
-            } else {
-                newMarkers.add(photoId)
-            }
-            currentState.copy(markedForDeletionIds = newMarkers)
+    fun cancelDeleteMarker(photoId: String) {
+        viewModelScope.launch { taskRepository.setMarkedForDeletion(photoId, false) }
+    }
+
+    class Factory(
+        private val groupId: String,
+        private val taskRepository: TaskRepository,
+        private val userSettingsRepository: UserSettingsRepository
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return PhotoSelectionViewModel(groupId, taskRepository, userSettingsRepository) as T
         }
     }
+}
 
-    fun setPage(index: Int) {
-        _state.update { it.copy(currentIndex = index) }
-    }
+private fun PhotoEntity.toUiPhoto(): PhotoSelectionItem {
+    return PhotoSelectionItem(
+        id = jpgUri,
+        uri = jpgUri,
+        timestamp = formatTime(capturedAtMillis),
+        hasRaw = rawUri != null,
+        markedForDeletion = markedForDeletion
+    )
+}
+
+private fun formatTime(value: Long): String {
+    val totalMinutes = value / 60_000L
+    val hours = (totalMinutes / 60L) % 24L
+    val minutes = totalMinutes % 60L
+    return "%02d:%02d".format(hours, minutes)
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.snapsort.app.ui.copy.deleteConfirmationBody
 
 data class DeleteFilePreview(
     val fileName: String,
@@ -44,7 +45,7 @@ fun DeleteConfirmationSheet(
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
             Text(
-                text = "确认删除",
+                text = "确认删除标记的文件",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -109,7 +110,7 @@ fun DeleteConfirmationSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "将通过系统相册彻底删除这 $totalFiles 个文件",
+                    text = deleteConfirmationBody(totalFiles),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -166,7 +167,7 @@ fun DeleteConfirmationSheet(
                     ),
                     modifier = Modifier.height(48.dp)
                 ) {
-                    Text("删除 $totalFiles 个文件", style = MaterialTheme.typography.labelLarge)
+                    Text("交给系统确认", style = MaterialTheme.typography.labelLarge)
                 }
             }
             

@@ -8,9 +8,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,7 +22,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,15 +35,19 @@ import coil.compose.AsyncImage
 import com.snapsort.app.SnapSortDependencies
 import com.snapsort.app.ui.components.DeleteConfirmationSheet
 import com.snapsort.app.ui.components.DeleteFilePreview
+import com.snapsort.app.ui.transition.PhotoOpenTransitionSpec
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onSelectFolder: () -> Unit,
-    onOpenGroup: (String) -> Unit,
+    onRescan: (String) -> Unit,
+    onOpenGroup: (String, PhotoOpenTransitionSpec?) -> Unit,
     onOpenSettings: () -> Unit,
     onDeleteConfirmed: () -> Unit,
+    deleteMessage: String? = null,
+    onDeleteMessageShown: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(
         factory = HomeViewModel.Factory(
             SnapSortDependencies.taskRepository(LocalContext.current)
@@ -52,50 +61,56 @@ fun HomeScreen(
     var deletePreviewFiles by remember { mutableStateOf<List<DeleteFilePreview>>(emptyList()) }
     val activeState = uiState as? HomeUiState.Active
 
+    LaunchedEffect(deleteMessage) {
+        if (deleteMessage != null) {
+            snackbarHostState.showSnackbar(deleteMessage)
+            onDeleteMessageShown()
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            if (uiState is HomeUiState.Active) {
-                val topBarState = uiState as HomeUiState.Active
-                TopAppBar(
-                    title = {
-                        Column {
-                            Text(text = topBarState.folderName, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                text = topBarState.statusText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+            when (uiState) {
+                is HomeUiState.Loading -> {
+                    TopAppBar(title = { Text("SnapSort") })
+                }
+                is HomeUiState.Empty -> {
+                    TopAppBar(
+                        title = { Text("SnapSort") },
+                        actions = {
+                            IconButton(onClick = onOpenSettings) {
+                                Icon(imageVector = Icons.Default.Settings, contentDescription = "设置")
+                            }
                         }
-                    },
-                    actions = {
-                        TextButton(
-                            onClick = {
-                                if (topBarState.markedForDeletionCount > 0) {
-                                    coroutineScope.launch {
-                                        deletePreviewFiles = viewModel.getDeletePreviewFiles()
-                                        showDeleteSheet = true
-                                    }
-                                }
-                            },
-                            enabled = topBarState.markedForDeletionCount > 0
-                        ) {
-                            Text("完成")
+                    )
+                }
+                is HomeUiState.Active -> {
+                    val topBarState = uiState as HomeUiState.Active
+                    TopAppBar(
+                        title = {
+                            Column {
+                                Text(text = topBarState.folderName, style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    text = topBarState.statusText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { onRescan(topBarState.folderUri) }) {
+                                Icon(imageVector = Icons.Default.Refresh, contentDescription = "重新扫描")
+                            }
+                            IconButton(onClick = onSelectFolder) {
+                                Icon(imageVector = Icons.Default.FolderOpen, contentDescription = "选择其他文件夹")
+                            }
+                            IconButton(onClick = onOpenSettings) {
+                                Icon(imageVector = Icons.Default.Settings, contentDescription = "设置")
+                            }
                         }
-                        IconButton(onClick = onOpenSettings) {
-                            Icon(imageVector = Icons.Default.Settings, contentDescription = "设置")
-                        }
-                    }
-                )
-            } else {
-                TopAppBar(
-                    title = { Text("SnapSort") },
-                    actions = {
-                        IconButton(onClick = onOpenSettings) {
-                            Icon(imageVector = Icons.Default.Settings, contentDescription = "设置")
-                        }
-                    }
-                )
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -105,6 +120,7 @@ fun HomeScreen(
                 .padding(paddingValues)
         ) {
             when (val state = uiState) {
+                is HomeUiState.Loading -> { /* 等待数据，不显示内容 */ }
                 is HomeUiState.Empty -> EmptyStateContent(
                     state = state,
                     onSelectFolder = onSelectFolder,
@@ -202,7 +218,7 @@ fun EmptyStateContent(
 @Composable
 fun ActiveStateContent(
     state: HomeUiState.Active,
-    onOpenGroup: (String) -> Unit,
+    onOpenGroup: (String, PhotoOpenTransitionSpec?) -> Unit,
     onFinish: () -> Unit
 ) {
     LazyColumn(
@@ -214,7 +230,9 @@ fun ActiveStateContent(
             TaskSummaryCard(state = state, onFinish = onFinish)
         }
         items(state.groups) { group ->
-            GroupItemCard(group = group, onClick = { onOpenGroup(group.id) })
+            GroupItemCard(group = group, onClick = { transitionSpec ->
+                onOpenGroup(group.id, transitionSpec)
+            })
         }
     }
 }
@@ -289,12 +307,25 @@ fun TaskSummaryCard(
 @Composable
 fun GroupItemCard(
     group: PhotoGroup,
-    onClick: () -> Unit
+    onClick: (PhotoOpenTransitionSpec?) -> Unit
 ) {
+    var coverBounds by remember(group.id) { mutableStateOf<Rect?>(null) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable {
+                val transitionSpec = group.coverPhotoUri?.let { uri ->
+                    coverBounds?.let { bounds ->
+                        if (bounds.width > 0f && bounds.height > 0f) {
+                            PhotoOpenTransitionSpec(imageUri = uri, startBounds = bounds)
+                        } else {
+                            null
+                        }
+                    }
+                }
+                onClick(transitionSpec)
+            },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -307,18 +338,17 @@ fun GroupItemCard(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Placeholder Image
             AsyncImage(
                 model = group.coverPhotoUri,
-                contentDescription = null,
+                contentDescription = "${if (group.type == GroupType.BURST) "连拍" else "散片"}分组封面",
                 modifier = Modifier
                     .size(88.dp)
+                    .onGloballyPositioned { coverBounds = it.boundsInWindow() }
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop
             )
             
-            // Details
             Column(
                 modifier = Modifier.weight(1f)
             ) {

@@ -15,6 +15,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+const val SnapSortDefaultDynamicColor = false
+
+fun shouldUseDynamicColor(dynamicColor: Boolean, sdkInt: Int): Boolean =
+    dynamicColor && sdkInt >= Build.VERSION_CODES.S
+
 private val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
@@ -62,11 +67,11 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun SnapSortTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = SnapSortDefaultDynamicColor,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        shouldUseDynamicColor(dynamicColor, Build.VERSION.SDK_INT) -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }

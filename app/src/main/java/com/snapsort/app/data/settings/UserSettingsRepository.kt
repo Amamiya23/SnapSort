@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.map
 private val Context.userSettingsDataStore by preferencesDataStore(name = "user_settings")
 
 enum class ThemeMode {
-    SYSTEM, LIGHT, DARK
+    SYSTEM, LIGHT, DARK, DYNAMIC
 }
 
 data class UserSettings(
