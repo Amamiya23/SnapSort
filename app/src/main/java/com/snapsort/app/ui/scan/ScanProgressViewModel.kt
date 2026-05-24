@@ -41,6 +41,11 @@ class ScanProgressViewModel(
             val settings = userSettingsRepository.settings.first()
             val scanSettings = ScanSettings(
                 burstThresholdMillis = settings.burstThresholdMillis,
+                looseGroupThresholdMillis = if (settings.autoSplitLooseGroups) {
+                    settings.looseGroupThresholdMillis
+                } else {
+                    Long.MAX_VALUE
+                },
                 sortDirection = settings.sortDirection
             )
             scanner.scan(folderUri, scanSettings).collect { event ->

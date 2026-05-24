@@ -9,6 +9,7 @@ import com.snapsort.app.data.db.PhotoGroupEntity
 import com.snapsort.app.data.db.TaskEntity
 import com.snapsort.app.data.repository.TaskRepository
 import com.snapsort.app.ui.components.DeleteFilePreview
+import com.snapsort.app.ui.copy.formatLocalTimeRange
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -103,7 +104,7 @@ private fun TaskEntity.toActiveState(
             type = if (group.kind == PhotoGroupKind.BURST.name) GroupType.BURST else GroupType.SINGLE,
             count = groupPhotos.size,
             markedForDeletionCount = groupPhotos.count { it.markedForDeletion },
-            timeRange = formatTimeRange(group.startMillis, group.endMillis),
+            timeRange = formatLocalTimeRange(group.startMillis, group.endMillis),
             coverPhotoUri = group.coverPhotoUri
         )
     }
@@ -114,14 +115,4 @@ private fun TaskEntity.toActiveState(
         statusText = "${photos.size} 张照片，${groups.size} 组，$markedCount 张已标记",
         groups = uiGroups
     )
-}
-
-private fun formatTimeRange(startMillis: Long, endMillis: Long): String {
-    fun format(value: Long): String {
-        val totalMinutes = value / 60_000L
-        val hours = (totalMinutes / 60L) % 24L
-        val minutes = totalMinutes % 60L
-        return "%02d:%02d".format(hours, minutes)
-    }
-    return if (startMillis == endMillis) format(startMillis) else "${format(startMillis)} - ${format(endMillis)}"
 }

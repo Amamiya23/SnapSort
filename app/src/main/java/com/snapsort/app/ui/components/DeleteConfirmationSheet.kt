@@ -104,22 +104,25 @@ fun DeleteConfirmationSheet(
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = deleteConfirmationBody(totalFiles),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                text = deleteConfirmationBody(totalFiles),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(onClick = { isListExpanded = !isListExpanded }) {
+                Icon(
+                    imageVector = if (isListExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
-                IconButton(onClick = { isListExpanded = !isListExpanded }) {
-                    Icon(
-                        imageVector = if (isListExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (isListExpanded) "收起文件清单" else "展开文件清单"
-                    )
-                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = if (isListExpanded) "收起文件清单" else "展开文件清单",
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
             
             if (isListExpanded) {

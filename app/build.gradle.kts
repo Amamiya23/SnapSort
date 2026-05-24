@@ -23,8 +23,8 @@ android {
         applicationId = "com.snapsort.app"
         minSdk = 33
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "v1.1"
     }
 
     buildFeatures {
@@ -48,6 +48,12 @@ android {
 
     buildTypes {
         release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             if (hasReleaseSigningConfig) {
                 signingConfig = signingConfigs.getByName("release")
             }

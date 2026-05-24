@@ -15,6 +15,11 @@ class SettingsCopyTest {
     }
 
     @Test
+    fun looseGroupThresholdLabelFormatsDefaultHour() {
+        assertEquals("1 小时", looseGroupThresholdLabel(60 * 60 * 1_000L))
+    }
+
+    @Test
     fun gestureShortcutDescriptionExplainsThresholdAndConfirmation() {
         assertEquals(
             "下滑超过提示阈值才会标记删除，上滑取消标记。按钮操作始终保留，最终删除前仍会确认。",

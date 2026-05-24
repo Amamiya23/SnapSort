@@ -25,6 +25,14 @@ class SettingsViewModel(
         viewModelScope.launch { repository.setBurstThresholdMillis(value) }
     }
 
+    fun setLooseGroupThresholdMillis(value: Long) {
+        viewModelScope.launch { repository.setLooseGroupThresholdMillis(value) }
+    }
+
+    fun setAutoSplitLooseGroups(value: Boolean) {
+        viewModelScope.launch { repository.setAutoSplitLooseGroups(value) }
+    }
+
     fun setNewestFirst(value: Boolean) {
         viewModelScope.launch {
             repository.setSortDirection(if (value) SortDirection.NEWEST_FIRST else SortDirection.OLDEST_FIRST)

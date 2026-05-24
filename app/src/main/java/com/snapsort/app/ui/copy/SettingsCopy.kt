@@ -9,5 +9,13 @@ fun burstThresholdLabel(thresholdMillis: Long): String = when (thresholdMillis) 
     else -> "${thresholdMillis / 1_000.0} 秒"
 }
 
+fun looseGroupThresholdLabel(thresholdMillis: Long): String = when (thresholdMillis) {
+    30 * 60 * 1_000L -> "30 分钟"
+    60 * 60 * 1_000L -> "1 小时"
+    2 * 60 * 60 * 1_000L -> "2 小时"
+    4 * 60 * 60 * 1_000L -> "4 小时"
+    else -> "${thresholdMillis / 60_000L} 分钟"
+}
+
 fun gestureShortcutDescription(): String =
     "下滑超过提示阈值才会标记删除，上滑取消标记。按钮操作始终保留，最终删除前仍会确认。"

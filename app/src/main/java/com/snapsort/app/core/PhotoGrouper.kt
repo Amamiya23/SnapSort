@@ -1,8 +1,13 @@
 package com.snapsort.app.core
 
+import java.time.Instant
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
+
 fun groupPhotos(
     photos: List<ScannedPhoto>,
     burstThresholdMillis: Long,
+    looseGroupThresholdMillis: Long = Long.MAX_VALUE,
     sortDirection: SortDirection
 ): List<PhotoGroup> {
     if (photos.isEmpty()) return emptyList()
@@ -44,6 +49,14 @@ fun groupPhotos(
         }
     }
 
+    fun addLoose(photo: ScannedPhoto) {
+        val previous = looseBuffer.lastOrNull()
+        if (previous != null && shouldSplitLooseGroup(previous, photo, looseGroupThresholdMillis)) {
+            flushLoose()
+        }
+        looseBuffer.add(photo)
+    }
+
     ascendingGroups.forEach { group ->
         if (group.size >= 2) {
             flushLoose()
@@ -55,7 +68,7 @@ fun groupPhotos(
                 )
             )
         } else {
-            looseBuffer.add(group.single())
+            addLoose(group.single())
         }
     }
     flushLoose()
@@ -66,4 +79,21 @@ fun groupPhotos(
             .asReversed()
             .map { group -> group.copy(photos = group.photos.asReversed()) }
     }
+}
+
+private fun shouldSplitLooseGroup(
+    previous: ScannedPhoto,
+    current: ScannedPhoto,
+    looseGroupThresholdMillis: Long
+): Boolean {
+    if (looseGroupThresholdMillis == Long.MAX_VALUE) return false
+    return looseBucketIndex(previous.capturedAtMillis, looseGroupThresholdMillis) !=
+        looseBucketIndex(current.capturedAtMillis, looseGroupThresholdMillis)
+}
+
+private fun looseBucketIndex(capturedAtMillis: Long, bucketSizeMillis: Long): Long {
+    val capturedAt = Instant.ofEpochMilli(capturedAtMillis).atZone(ZoneId.systemDefault())
+    val dayStart = capturedAt.toLocalDate().atStartOfDay(capturedAt.zone)
+    val millisSinceDayStart = ChronoUnit.MILLIS.between(dayStart, capturedAt)
+    return dayStart.toInstant().toEpochMilli() + millisSinceDayStart / bucketSizeMillis
 }

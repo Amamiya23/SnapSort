@@ -20,6 +20,7 @@ import java.util.Locale
 
 data class ScanSettings(
     val burstThresholdMillis: Long,
+    val looseGroupThresholdMillis: Long,
     val sortDirection: SortDirection
 )
 
@@ -91,6 +92,7 @@ class FolderScanner(
         val groups = groupPhotos(
             photos = photos,
             burstThresholdMillis = settings.burstThresholdMillis,
+            looseGroupThresholdMillis = settings.looseGroupThresholdMillis,
             sortDirection = settings.sortDirection
         )
         emit(ScanEvent.Complete(folder.name ?: "所选文件夹", groups))

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.snapsort.app.data.db.PhotoEntity
 import com.snapsort.app.data.repository.TaskRepository
 import com.snapsort.app.data.settings.UserSettingsRepository
+import com.snapsort.app.ui.copy.formatLocalPhotoTime
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -79,15 +80,8 @@ private fun PhotoEntity.toUiPhoto(): PhotoSelectionItem {
     return PhotoSelectionItem(
         id = jpgUri,
         uri = jpgUri,
-        timestamp = formatTime(capturedAtMillis),
+        timestamp = formatLocalPhotoTime(capturedAtMillis),
         hasRaw = rawUri != null,
         markedForDeletion = markedForDeletion
     )
-}
-
-private fun formatTime(value: Long): String {
-    val totalMinutes = value / 60_000L
-    val hours = (totalMinutes / 60L) % 24L
-    val minutes = totalMinutes % 60L
-    return "%02d:%02d".format(hours, minutes)
 }

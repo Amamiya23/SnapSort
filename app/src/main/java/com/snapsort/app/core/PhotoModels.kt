@@ -46,6 +46,6 @@ data class PhotoGroup(
     val kind: PhotoGroupKind,
     val photos: List<ScannedPhoto>
 ) {
-    val startMillis: Long = photos.first().capturedAtMillis
-    val endMillis: Long = photos.last().capturedAtMillis
+    val startMillis: Long = photos.minOf { it.capturedAtMillis }
+    val endMillis: Long = photos.maxOf { it.capturedAtMillis }
 }

@@ -391,12 +391,6 @@ fun GroupItemCard(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.error
                     )
-                } else {
-                    Text(
-                        text = "未标记删除",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline
-                    )
                 }
             }
         }
