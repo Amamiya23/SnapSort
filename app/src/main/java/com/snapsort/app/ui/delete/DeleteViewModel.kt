@@ -14,10 +14,12 @@ import com.snapsort.app.data.repository.DeleteCandidate
 import com.snapsort.app.data.repository.DeleteCalibrationResult
 import com.snapsort.app.data.repository.DeleteFailure
 import com.snapsort.app.data.repository.TaskRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class DeleteAuthorizationState(
     val pendingIntent: PendingIntent? = null,
@@ -39,7 +41,9 @@ class DeleteViewModel(
     fun prepareDeleteRequest() {
         viewModelScope.launch {
             _authorizationState.value = DeleteAuthorizationState()
-            pendingCandidates = taskRepository.getDeleteCandidates()
+            pendingCandidates = withContext(Dispatchers.IO) {
+                taskRepository.getDeleteCandidates()
+            }
             val uris = pendingCandidates.flatMap { candidate ->
                 buildList {
                     add(Uri.parse(candidate.jpgUri))
@@ -56,7 +60,9 @@ class DeleteViewModel(
                 )
             } catch (exception: Exception) {
                 Log.w(TAG, "MediaStore delete request failed, falling back to SAF delete", exception)
-                deleteWithSafFallback()
+                withContext(Dispatchers.IO) {
+                    deleteWithSafFallback()
+                }
                 return@launch
             }
         }
@@ -64,7 +70,9 @@ class DeleteViewModel(
 
     fun onDeleteAccepted() {
         viewModelScope.launch {
-            calibrateAfterDelete()
+            withContext(Dispatchers.IO) {
+                calibrateAfterDelete()
+            }
         }
     }
 
@@ -76,7 +84,9 @@ class DeleteViewModel(
 
     fun cancelRemainingMarks() {
         viewModelScope.launch {
-            taskRepository.clearDeleteMarks(pendingCandidates.map { it.jpgUri })
+            withContext(Dispatchers.IO) {
+                taskRepository.clearDeleteMarks(pendingCandidates.map { it.jpgUri })
+            }
         }
     }
 

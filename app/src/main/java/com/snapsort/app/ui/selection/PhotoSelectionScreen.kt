@@ -236,9 +236,10 @@ fun PhotoSelectionScreen(
             }
             }
         }
-    ) { _ ->
+    ) { contentPadding ->
         Box(modifier = Modifier
             .fillMaxSize()
+            .consumeWindowInsets(contentPadding)
             .background(previewBackgroundColor)) {
             HorizontalPager(
                 state = pagerState,

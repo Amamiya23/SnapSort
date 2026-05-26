@@ -23,8 +23,8 @@ android {
         applicationId = "com.snapsort.app"
         minSdk = 33
         targetSdk = 34
-        versionCode = 2
-        versionName = "v1.1"
+        versionCode = 3
+        versionName = "v2.0"
     }
 
     buildFeatures {

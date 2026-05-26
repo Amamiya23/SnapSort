@@ -229,7 +229,7 @@ fun ActiveStateContent(
         item {
             TaskSummaryCard(state = state, onFinish = onFinish)
         }
-        items(state.groups) { group ->
+        items(state.groups, key = { it.id }) { group ->
             GroupItemCard(group = group, onClick = { transitionSpec ->
                 onOpenGroup(group.id, transitionSpec)
             })

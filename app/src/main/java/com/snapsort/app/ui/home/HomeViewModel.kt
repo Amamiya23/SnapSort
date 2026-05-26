@@ -10,10 +10,13 @@ import com.snapsort.app.data.db.TaskEntity
 import com.snapsort.app.data.repository.TaskRepository
 import com.snapsort.app.ui.components.DeleteFilePreview
 import com.snapsort.app.ui.copy.formatLocalTimeRange
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
 
 data class PhotoGroup(
     val id: String,
@@ -61,7 +64,8 @@ class HomeViewModel(
         } else {
             task.toActiveState(groups, photos)
         }
-    }.stateIn(
+    }.flowOn(Dispatchers.Default)
+        .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = HomeUiState.Loading
@@ -72,11 +76,13 @@ class HomeViewModel(
     fun toggleState() = Unit
 
     suspend fun getDeletePreviewFiles(): List<DeleteFilePreview> {
-        return taskRepository.getDeleteCandidates().flatMap { candidate ->
-            buildList {
-                add(DeleteFilePreview(candidate.jpgFileName, candidate.jpgUri))
-                if (candidate.rawUri != null && candidate.rawFileName != null) {
-                    add(DeleteFilePreview(candidate.rawFileName, candidate.rawUri))
+        return withContext(Dispatchers.Default) {
+            taskRepository.getDeleteCandidates().flatMap { candidate ->
+                buildList {
+                    add(DeleteFilePreview(candidate.jpgFileName, candidate.jpgUri))
+                    if (candidate.rawUri != null && candidate.rawFileName != null) {
+                        add(DeleteFilePreview(candidate.rawFileName, candidate.rawUri))
+                    }
                 }
             }
         }

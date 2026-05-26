@@ -9,6 +9,7 @@ import com.snapsort.app.data.scanner.FolderScanner
 import com.snapsort.app.data.scanner.ScanEvent
 import com.snapsort.app.data.scanner.ScanSettings
 import com.snapsort.app.data.settings.UserSettingsRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class ScanProgressUiState(
     val currentStage: String = "准备扫描",
@@ -57,14 +59,16 @@ class ScanProgressViewModel(
                         currentFileName = event.currentFileName.orEmpty()
                     )
                     is ScanEvent.Complete -> {
-                        taskRepository.saveRecentTask(
-                            folderUri = folderUri.toString(),
-                            folderName = event.folderName,
-                            scannedAtMillis = System.currentTimeMillis(),
-                            burstThresholdMillis = settings.burstThresholdMillis,
-                            sortDirection = settings.sortDirection,
-                            groups = event.groups
-                        )
+                        withContext(Dispatchers.Default) {
+                            taskRepository.saveRecentTask(
+                                folderUri = folderUri.toString(),
+                                folderName = event.folderName,
+                                scannedAtMillis = System.currentTimeMillis(),
+                                burstThresholdMillis = settings.burstThresholdMillis,
+                                sortDirection = settings.sortDirection,
+                                groups = event.groups
+                            )
+                        }
                         _uiState.update { it.copy(isComplete = true) }
                     }
                     is ScanEvent.Failed -> _uiState.update {

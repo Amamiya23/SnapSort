@@ -7,9 +7,11 @@ import com.snapsort.app.data.db.PhotoEntity
 import com.snapsort.app.data.repository.TaskRepository
 import com.snapsort.app.data.settings.UserSettingsRepository
 import com.snapsort.app.ui.copy.formatLocalPhotoTime
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -50,7 +52,8 @@ class PhotoSelectionViewModel(
             ),
             gestureShortcutEnabled = settings.gestureShortcutEnabled
         )
-    }.stateIn(
+    }.flowOn(Dispatchers.Default)
+        .stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = PhotoSelectionState()

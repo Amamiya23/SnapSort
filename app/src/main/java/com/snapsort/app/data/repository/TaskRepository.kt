@@ -65,10 +65,7 @@ class TaskRepository(
                 coverPhotoUri = group.photos.first().jpgUri
             )
         }
-        val previousMarks = dao.getPhotos()
-            .filter { it.markedForDeletion }
-            .map { it.jpgUri }
-            .toSet()
+        val previousMarks = dao.getMarkedPhotoUris().toSet()
         val photoEntities = groups.flatMap { group ->
             group.photos.mapIndexed { index, photo ->
                 photo.toEntity(
@@ -102,8 +99,8 @@ class TaskRepository(
     }
 
     suspend fun clearDeleteMarks(jpgUris: List<String>) {
-        jpgUris.forEach { jpgUri ->
-            dao.setMarkedForDeletion(jpgUri, false)
+        if (jpgUris.isNotEmpty()) {
+            dao.clearDeleteMarks(jpgUris)
         }
     }
 

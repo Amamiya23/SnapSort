@@ -27,11 +27,17 @@ interface SnapSortDao {
     @Query("SELECT * FROM photos WHERE taskId = :taskId")
     suspend fun getPhotos(taskId: String = RECENT_TASK_ID): List<PhotoEntity>
 
+    @Query("SELECT jpgUri FROM photos WHERE taskId = :taskId AND markedForDeletion = 1")
+    suspend fun getMarkedPhotoUris(taskId: String = RECENT_TASK_ID): List<String>
+
     @Query("SELECT COUNT(*) FROM photos WHERE taskId = :taskId")
     suspend fun getPhotoCount(taskId: String = RECENT_TASK_ID): Int
 
     @Query("UPDATE photos SET markedForDeletion = :marked WHERE jpgUri = :jpgUri")
     suspend fun setMarkedForDeletion(jpgUri: String, marked: Boolean)
+
+    @Query("UPDATE photos SET markedForDeletion = 0 WHERE jpgUri IN (:jpgUris)")
+    suspend fun clearDeleteMarks(jpgUris: List<String>)
 
     @Query("DELETE FROM photos WHERE jpgUri IN (:jpgUris)")
     suspend fun deletePhotos(jpgUris: List<String>)
