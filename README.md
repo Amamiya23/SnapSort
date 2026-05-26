@@ -1,7 +1,7 @@
 # SnapSort
 
 SnapSort 是一款面向相机照片整理场景的 Android 选片应用。它适合在拍摄后把相机照片导入手机文件夹，再快速浏览 JPG/JPEG、按时间分组筛选、标记废片，并在删除前确认关联的 RAW 文件。
-![alt text](assets/d5495511e5e9f9948825886f6088fd51.jpg)
+![alt text](assets/screenshots.jpg)
 ## 主要功能
 
 - 选择本地照片文件夹并扫描 JPG/JPEG 文件
