@@ -8,8 +8,7 @@ app/schemas/
 .codex/
 .impeccable/
 .opencode/
-.trellis/workspace/
-.trellis/tasks/
+.trellis/
 docs/
 AGENTS.md
 .impeccable.md
