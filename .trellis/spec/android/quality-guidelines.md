@@ -20,6 +20,83 @@ For release/build verification:
 Release signing reads `keystore.properties`, which is intentionally local and
 not committed.
 
+## Build Versioning Command
+
+### 1. Scope / Trigger
+
+Use this contract when changing SnapSort APK packaging commands, Android
+`versionCode`, Android `versionName`, or local release helpers. The goal is to
+avoid manual Gradle edits while keeping direct Gradle builds usable.
+
+### 2. Signatures
+
+```bash
+scripts/build-apk.sh [--release|--debug] [--name VERSION_NAME]
+VERSION_CODE=<positive-int> VERSION_NAME=<name> GRADLE_BIN=<path> scripts/build-apk.sh
+```
+
+Gradle accepts the matching project properties:
+
+```bash
+-PVERSION_CODE=<positive-int>
+-PVERSION_NAME=<name>
+```
+
+### 3. Contracts
+
+- `--release` builds `:app:assembleRelease`; this is the default.
+- `--debug` builds `:app:assembleDebug`.
+- `--name` overrides generated `versionName`.
+- `VERSION_CODE` overrides generated `versionCode`.
+- `VERSION_NAME` overrides generated `versionName`.
+- `GRADLE_BIN` overrides Gradle executable discovery.
+- Direct Gradle builds without project properties must keep using the
+  defaults in `app/build.gradle.kts`.
+
+### 4. Validation & Error Matrix
+
+- Missing `--name` value -> exit with usage error.
+- Unknown option -> exit with usage error.
+- Non-integer, zero, negative, or oversized `VERSION_CODE` -> exit before
+  invoking Gradle.
+- Missing Gradle executable -> exit with a clear `GRADLE_BIN` instruction.
+- Invalid `-PVERSION_CODE` passed directly to Gradle -> fail during Gradle
+  configuration with a positive-integer error.
+
+### 5. Good/Base/Bad Cases
+
+- Good: `scripts/build-apk.sh --name v2.1` builds release with generated
+  `versionCode` and explicit `versionName`.
+- Base: `scripts/build-apk.sh --debug` builds debug with generated metadata.
+- Bad: manually editing `versionCode` and `versionName` in
+  `app/build.gradle.kts` for every local package build.
+
+### 6. Tests Required
+
+- Run `bash -n scripts/build-apk.sh` after script edits.
+- Run `:app:compileDebugKotlin` after Gradle Kotlin DSL edits.
+- Run `scripts/build-apk.sh --debug --name <test-name>` and inspect generated
+  debug manifest or output metadata for injected version fields.
+- For release-helper changes, run `scripts/build-apk.sh --release --name
+  <test-name>` and confirm `app/build/outputs/apk/release/app-release.apk`
+  exists.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```kotlin
+versionCode = 4
+versionName = "v2.1"
+```
+
+#### Correct
+
+```kotlin
+versionCode = appVersionCode.get()
+versionName = appVersionName.get()
+```
+
 ## Test Expectations
 
 Unit tests are JUnit4 tests under `app/src/test/java`.
@@ -74,4 +151,3 @@ Before finishing a change, check:
 - Use Material icons already available in the project for Compose actions.
 - Avoid adding new dependencies unless the task clearly needs them and the
   Gradle change is verified.
-

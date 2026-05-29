@@ -14,6 +14,18 @@ val releaseKeystoreProperties = Properties().apply {
 }
 val hasReleaseSigningConfig = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
     .all { !releaseKeystoreProperties.getProperty(it).isNullOrBlank() }
+val defaultVersionCode = 3
+val defaultVersionName = "v2.0"
+val appVersionCode = providers.gradleProperty("VERSION_CODE")
+    .map { value ->
+        val parsed = value.toIntOrNull()
+        require(parsed != null && parsed > 0) { "VERSION_CODE must be a positive integer." }
+        parsed
+    }
+    .orElse(defaultVersionCode)
+val appVersionName = providers.gradleProperty("VERSION_NAME")
+    .map { value -> value.ifBlank { defaultVersionName } }
+    .orElse(defaultVersionName)
 
 android {
     namespace = "com.snapsort.app"
@@ -23,8 +35,8 @@ android {
         applicationId = "com.snapsort.app"
         minSdk = 33
         targetSdk = 34
-        versionCode = 3
-        versionName = "v2.0"
+        versionCode = appVersionCode.get()
+        versionName = appVersionName.get()
     }
 
     buildFeatures {
