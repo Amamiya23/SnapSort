@@ -45,3 +45,43 @@ Initialized Trellis files, replaced the default backend scaffold with Android-sp
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Automatic APK versioning script
+
+**Date**: 2026-05-29
+**Task**: Automatic APK versioning script
+**Branch**: `main`
+
+### Summary
+
+Added a build helper that generates APK version metadata automatically, documented usage, verified debug/release builds, and captured the command contract in Android quality guidelines.
+
+### Main Changes
+
+- Added `scripts/build-apk.sh` to package release/debug APKs with generated `VERSION_CODE` and `VERSION_NAME`.
+- Updated `app/build.gradle.kts` to read optional Gradle version properties while preserving direct-build defaults.
+- Documented script usage in `README.md`.
+- Added the build-versioning command contract to Android quality guidelines.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `dbcf982` | (see git log) |
+
+### Testing
+
+- [OK] `bash -n scripts/build-apk.sh`
+- [OK] `:app:compileDebugKotlin`
+- [OK] `:app:testDebugUnitTest`
+- [OK] `scripts/build-apk.sh --debug --name vtest-auto-version`
+- [OK] `scripts/build-apk.sh --release --name vtest-auto-version-release`
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
