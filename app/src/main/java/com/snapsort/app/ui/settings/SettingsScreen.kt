@@ -1,5 +1,6 @@
 package com.snapsort.app.ui.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -96,86 +101,71 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 32.dp)
+            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                SectionHeader(title = "连拍阈值")
-            }
-            item {
-                SelectionRow(
-                    title = "连拍分组间隔",
-                    value = burstThresholdLabel(settings.burstThresholdMillis),
-                    onClick = { burstSheetOpen = true }
-                )
-            }
-
-            item { SectionDivider() }
-
-            item {
-                SectionHeader(title = "散片分组")
-            }
-            item {
-                ToggleRow(
-                    title = "自动拆分散片组",
-                    checked = settings.autoSplitLooseGroups,
-                    onCheckedChange = viewModel::setAutoSplitLooseGroups
-                )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }
-            item {
-                SelectionRow(
-                    title = "散片分组时间段",
-                    description = if (settings.autoSplitLooseGroups) null
-                        else "自动拆分已关闭，重新开启后继续使用该时间。",
-                    value = looseGroupThresholdLabel(settings.looseGroupThresholdMillis),
-                    enabled = settings.autoSplitLooseGroups,
-                    onClick = { looseGroupSheetOpen = true }
-                )
+                SettingsSectionCard(title = "连拍阈值") {
+                    SelectionRow(
+                        title = "连拍分组间隔",
+                        value = burstThresholdLabel(settings.burstThresholdMillis),
+                        onClick = { burstSheetOpen = true }
+                    )
+                }
             }
 
-            item { SectionDivider() }
-
             item {
-                SectionHeader(title = "筛选行为")
-            }
-            item {
-                ToggleRow(
-                    title = if (settings.sortDirection == SortDirection.NEWEST_FIRST) "从新到旧" else "从旧到新",
-                    description = "首页分组和组内照片使用同一排序。",
-                    checked = settings.sortDirection == SortDirection.NEWEST_FIRST,
-                    onCheckedChange = viewModel::setNewestFirst
-                )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }
-            item {
-                ToggleRow(
-                    title = "完成当前组后自动进入下一组",
-                    description = "关闭后会停留在当前组，由你手动返回首页。",
-                    checked = settings.autoAdvanceGroup,
-                    onCheckedChange = viewModel::setAutoAdvanceGroup
-                )
-            }
-            item { HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp)) }
-            item {
-                ToggleRow(
-                    title = "手势快捷",
-                    description = gestureShortcutDescription(),
-                    checked = settings.gestureShortcutEnabled,
-                    onCheckedChange = viewModel::setGestureShortcutEnabled
-                )
+                SettingsSectionCard(title = "散片分组") {
+                    ToggleRow(
+                        title = "自动拆分散片组",
+                        checked = settings.autoSplitLooseGroups,
+                        onCheckedChange = viewModel::setAutoSplitLooseGroups
+                    )
+                    CardRowDivider()
+                    SelectionRow(
+                        title = "散片分组时间段",
+                        description = if (settings.autoSplitLooseGroups) null
+                            else "自动拆分已关闭，重新开启后继续使用该时间。",
+                        value = looseGroupThresholdLabel(settings.looseGroupThresholdMillis),
+                        enabled = settings.autoSplitLooseGroups,
+                        onClick = { looseGroupSheetOpen = true }
+                    )
+                }
             }
 
-            item { SectionDivider() }
+            item {
+                SettingsSectionCard(title = "筛选行为") {
+                    ToggleRow(
+                        title = if (settings.sortDirection == SortDirection.NEWEST_FIRST) "从新到旧" else "从旧到新",
+                        description = "首页分组和组内照片使用同一排序。",
+                        checked = settings.sortDirection == SortDirection.NEWEST_FIRST,
+                        onCheckedChange = viewModel::setNewestFirst
+                    )
+                    CardRowDivider()
+                    ToggleRow(
+                        title = "完成当前组后自动进入下一组",
+                        description = "关闭后会停留在当前组，由你手动返回首页。",
+                        checked = settings.autoAdvanceGroup,
+                        onCheckedChange = viewModel::setAutoAdvanceGroup
+                    )
+                    CardRowDivider()
+                    ToggleRow(
+                        title = "手势快捷",
+                        description = gestureShortcutDescription(),
+                        checked = settings.gestureShortcutEnabled,
+                        onCheckedChange = viewModel::setGestureShortcutEnabled
+                    )
+                }
+            }
 
             item {
-                SectionHeader(title = "主题")
-            }
-            item {
-                SelectionRow(
-                    title = "界面外观",
-                    value = themeOptions.first { it.value == settings.themeMode }.label,
-                    onClick = { themeSheetOpen = true }
-                )
+                SettingsSectionCard(title = "主题") {
+                    SelectionRow(
+                        title = "界面外观",
+                        value = themeOptions.first { it.value == settings.themeMode }.label,
+                        onClick = { themeSheetOpen = true }
+                    )
+                }
             }
         }
     }
@@ -226,20 +216,44 @@ private data class SettingOption<T>(
 )
 
 @Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 12.dp)
-    )
+private fun SettingsSectionCard(
+    title: String,
+    content: @Composable () -> Unit
+) {
+    val cardColor = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) {
+        Color.White
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp)
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = cardColor,
+            border = BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
+            )
+        ) {
+            Column(content = { content() })
+        }
+    }
 }
 
 @Composable
-private fun SectionDivider() {
-    Spacer(modifier = Modifier.height(16.dp))
-    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+private fun CardRowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.24f)
+    )
 }
 
 @Composable
