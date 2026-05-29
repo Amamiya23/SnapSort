@@ -9,22 +9,25 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -57,9 +61,9 @@ fun SettingsScreen(
     )
 ) {
     val settings by viewModel.settings.collectAsState()
-    var burstDialogOpen by remember { mutableStateOf(false) }
-    var looseGroupDialogOpen by remember { mutableStateOf(false) }
-    var themeDialogOpen by remember { mutableStateOf(false) }
+    var burstSheetOpen by remember { mutableStateOf(false) }
+    var looseGroupSheetOpen by remember { mutableStateOf(false) }
+    var themeSheetOpen by remember { mutableStateOf(false) }
     val thresholds = listOf(500L, 1_000L, 2_000L, 3_000L, 5_000L)
         .map { SettingOption(it, burstThresholdLabel(it)) }
     val looseGroupThresholds = listOf(
@@ -101,7 +105,7 @@ fun SettingsScreen(
                 SelectionRow(
                     title = "连拍分组间隔",
                     value = burstThresholdLabel(settings.burstThresholdMillis),
-                    onClick = { burstDialogOpen = true }
+                    onClick = { burstSheetOpen = true }
                 )
             }
 
@@ -125,7 +129,7 @@ fun SettingsScreen(
                         else "自动拆分已关闭，重新开启后继续使用该时间。",
                     value = looseGroupThresholdLabel(settings.looseGroupThresholdMillis),
                     enabled = settings.autoSplitLooseGroups,
-                    onClick = { looseGroupDialogOpen = true }
+                    onClick = { looseGroupSheetOpen = true }
                 )
             }
 
@@ -170,47 +174,47 @@ fun SettingsScreen(
                 SelectionRow(
                     title = "界面外观",
                     value = themeOptions.first { it.value == settings.themeMode }.label,
-                    onClick = { themeDialogOpen = true }
+                    onClick = { themeSheetOpen = true }
                 )
             }
         }
     }
 
-    if (burstDialogOpen) {
-        SettingSelectionDialog(
+    if (burstSheetOpen) {
+        SettingSelectionSheet(
             title = "连拍分组间隔",
             options = thresholds,
             selectedValue = settings.burstThresholdMillis,
-            onDismiss = { burstDialogOpen = false },
+            onDismiss = { burstSheetOpen = false },
             onSelect = { value ->
                 viewModel.setBurstThresholdMillis(value)
-                burstDialogOpen = false
+                burstSheetOpen = false
             }
         )
     }
 
-    if (looseGroupDialogOpen) {
-        SettingSelectionDialog(
+    if (looseGroupSheetOpen) {
+        SettingSelectionSheet(
             title = "散片分组时间段",
             options = looseGroupThresholds,
             selectedValue = settings.looseGroupThresholdMillis,
-            onDismiss = { looseGroupDialogOpen = false },
+            onDismiss = { looseGroupSheetOpen = false },
             onSelect = { value ->
                 viewModel.setLooseGroupThresholdMillis(value)
-                looseGroupDialogOpen = false
+                looseGroupSheetOpen = false
             }
         )
     }
 
-    if (themeDialogOpen) {
-        SettingSelectionDialog(
+    if (themeSheetOpen) {
+        SettingSelectionSheet(
             title = "主题",
             options = themeOptions,
             selectedValue = settings.themeMode,
-            onDismiss = { themeDialogOpen = false },
+            onDismiss = { themeSheetOpen = false },
             onSelect = { value ->
                 viewModel.setThemeMode(value)
-                themeDialogOpen = false
+                themeSheetOpen = false
             }
         )
     }
@@ -289,47 +293,72 @@ private fun SelectionRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun <T> SettingSelectionDialog(
+private fun <T> SettingSelectionSheet(
     title: String,
     options: List<SettingOption<T>>,
     selectedValue: T,
     onDismiss: () -> Unit,
     onSelect: (T) -> Unit
 ) {
-    AlertDialog(
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column {
-                options.forEach { option ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(option.value) }
-                            .padding(vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = option.value == selectedValue,
-                            onClick = { onSelect(option.value) }
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            options.forEach { option ->
+                val selected = option.value == selectedValue
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .selectable(
+                            selected = selected,
+                            onClick = { onSelect(option.value) },
+                            role = Role.RadioButton
                         )
-                        Text(
-                            text = option.label,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = selected,
+                        onClick = null
+                    )
+                    Text(
+                        text = option.label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
+
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("取消")
             }
         }
-    )
+    }
 }
 
 @Composable
