@@ -1,5 +1,7 @@
 package com.snapsort.app.ui.settings
 
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,16 +37,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.snapsort.app.SnapSortDependencies
@@ -53,6 +65,11 @@ import com.snapsort.app.data.settings.ThemeMode
 import com.snapsort.app.ui.copy.burstThresholdLabel
 import com.snapsort.app.ui.copy.gestureShortcutDescription
 import com.snapsort.app.ui.copy.looseGroupThresholdLabel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,9 +83,13 @@ fun SettingsScreen(
     )
 ) {
     val settings by viewModel.settings.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    val maxOverscrollOffsetPx = with(LocalDensity.current) { 40.dp.toPx() }
     var burstSheetOpen by remember { mutableStateOf(false) }
     var looseGroupSheetOpen by remember { mutableStateOf(false) }
     var themeSheetOpen by remember { mutableStateOf(false) }
+    var overscrollOffsetPx by remember { mutableFloatStateOf(0f) }
+    var releaseAnimationJob by remember { mutableStateOf<Job?>(null) }
     val thresholds = listOf(500L, 1_000L, 2_000L, 3_000L, 5_000L)
         .map { SettingOption(it, burstThresholdLabel(it)) }
     val looseGroupThresholds = listOf(
@@ -83,6 +104,82 @@ fun SettingsScreen(
         SettingOption(ThemeMode.DARK, "深色"),
         SettingOption(ThemeMode.DYNAMIC, "动态")
     )
+    val overscrollConnection = remember(maxOverscrollOffsetPx) {
+        object : NestedScrollConnection {
+            private fun stopReleaseAnimation() {
+                releaseAnimationJob?.cancel()
+                releaseAnimationJob = null
+            }
+
+            private fun scheduleRelease() {
+                if (overscrollOffsetPx == 0f) {
+                    return
+                }
+                stopReleaseAnimation()
+                releaseAnimationJob = coroutineScope.launch {
+                    animate(
+                        initialValue = overscrollOffsetPx,
+                        targetValue = 0f,
+                        animationSpec = spring(
+                            dampingRatio = 0.72f,
+                            stiffness = 420f
+                        )
+                    ) { value, _ ->
+                        overscrollOffsetPx = value
+                    }
+                }
+            }
+
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.Drag || overscrollOffsetPx == 0f) {
+                    return Offset.Zero
+                }
+                val delta = available.y
+                if (delta == 0f || (delta > 0f) == (overscrollOffsetPx > 0f)) {
+                    return Offset.Zero
+                }
+
+                stopReleaseAnimation()
+                val previous = overscrollOffsetPx
+                overscrollOffsetPx = if (previous > 0f) {
+                    max(0f, previous + delta)
+                } else {
+                    min(0f, previous + delta)
+                }
+                return Offset(
+                    x = 0f,
+                    y = overscrollOffsetPx - previous
+                )
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (source != NestedScrollSource.Drag || available.y == 0f) {
+                    return Offset.Zero
+                }
+
+                stopReleaseAnimation()
+                val stretchRatio = 1f - (abs(overscrollOffsetPx) / maxOverscrollOffsetPx).coerceIn(0f, 1f)
+                val dampedDelta = available.y * (0.10f + 0.06f * stretchRatio)
+                overscrollOffsetPx = (overscrollOffsetPx + dampedDelta)
+                    .coerceIn(-maxOverscrollOffsetPx, maxOverscrollOffsetPx)
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                scheduleRelease()
+                return Velocity.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                scheduleRelease()
+                return Velocity.Zero
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -100,7 +197,18 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .nestedScroll(overscrollConnection)
+                .graphicsLayer {
+                    val stretchProgress = (abs(overscrollOffsetPx) / maxOverscrollOffsetPx)
+                        .coerceIn(0f, 1f)
+                    transformOrigin = if (overscrollOffsetPx >= 0f) {
+                        TransformOrigin(0.5f, 0f)
+                    } else {
+                        TransformOrigin(0.5f, 1f)
+                    }
+                    scaleY = 1f + stretchProgress * 0.035f
+                },
             contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
