@@ -4,6 +4,7 @@ app/build/
 local.properties
 app/schemas/
 #ai配置
+.agents/
 .claude/
 .codex/
 .impeccable/
