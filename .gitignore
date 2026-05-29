@@ -4,8 +4,12 @@ app/build/
 local.properties
 app/schemas/
 #ai配置
+.claude/
+.codex/
 .impeccable/
 .opencode/
+.trellis/workspace/
+.trellis/tasks/
 docs/
 AGENTS.md
 .impeccable.md
