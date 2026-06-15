@@ -73,3 +73,29 @@ release APK 输出位置：
 ```text
 app/build/outputs/apk/release/
 ```
+
+## 上传到 GitHub Release
+
+先编译 release APK：
+
+```bash
+scripts/build-apk.sh --release --name v2.1
+```
+
+再把 APK 上传到已有的 GitHub Release：
+
+```bash
+scripts/upload-release-apk.sh v2.1
+```
+
+如果 release 不在当前 Git remote 对应的仓库，指定目标仓库：
+
+```bash
+scripts/upload-release-apk.sh v2.1 --repo OWNER/REPO
+```
+
+覆盖同名 asset：
+
+```bash
+scripts/upload-release-apk.sh v2.1 --clobber
+```
