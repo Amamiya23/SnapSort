@@ -88,6 +88,18 @@ scripts/build-apk.sh --release --name v2.1
 scripts/upload-release-apk.sh v2.1
 ```
 
+同时用 Markdown 文件更新 release 说明：
+
+```bash
+scripts/upload-release-apk.sh v2.1 --notes-file release-notes/v2.1.md
+```
+
+也可以直接传入更新说明文本：
+
+```bash
+scripts/upload-release-apk.sh v2.1 --notes "修复照片选择体验，并优化 release 打包流程。"
+```
+
 如果 release 不在当前 Git remote 对应的仓库，指定目标仓库：
 
 ```bash
