@@ -36,6 +36,17 @@ interface SnapSortDao {
     @Query("UPDATE photos SET markedForDeletion = :marked WHERE jpgUri = :jpgUri")
     suspend fun setMarkedForDeletion(jpgUri: String, marked: Boolean)
 
+    @Query(
+        """
+        UPDATE photos
+        SET aperture = :aperture,
+            shutterSpeedSeconds = :shutterSpeedSeconds,
+            iso = :iso
+        WHERE jpgUri = :jpgUri
+        """
+    )
+    suspend fun updateExposureMetadata(jpgUri: String, aperture: Double?, shutterSpeedSeconds: Double?, iso: Int?)
+
     @Query("UPDATE photos SET markedForDeletion = 0 WHERE jpgUri IN (:jpgUris)")
     suspend fun clearDeleteMarks(jpgUris: List<String>)
 

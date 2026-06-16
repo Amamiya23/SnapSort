@@ -173,6 +173,9 @@ class PhotoGrouperTest {
             extension = "jpg",
             capturedAtMillis = capturedAtMillis,
             captureTimeSource = CaptureTimeSource.EXIF,
+            aperture = null,
+            shutterSpeedSeconds = null,
+            iso = null,
             modifiedAtMillis = capturedAtMillis,
             rawMatch = null
         )

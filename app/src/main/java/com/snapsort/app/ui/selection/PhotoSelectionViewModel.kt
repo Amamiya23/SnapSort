@@ -1,12 +1,16 @@
 package com.snapsort.app.ui.selection
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.snapsort.app.data.db.PhotoEntity
 import com.snapsort.app.data.repository.TaskRepository
+import com.snapsort.app.data.scanner.PhotoExifReader
 import com.snapsort.app.data.settings.UserSettingsRepository
-import com.snapsort.app.ui.copy.formatLocalPhotoTime
+import com.snapsort.app.ui.copy.formatAperture
+import com.snapsort.app.ui.copy.formatIso
+import com.snapsort.app.ui.copy.formatShutterSpeed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -18,8 +22,11 @@ import kotlinx.coroutines.launch
 data class PhotoSelectionItem(
     val id: String,
     val uri: String,
-    val timestamp: String,
-    val hasRaw: Boolean,
+    val fileName: String,
+    val fileNameLine: String,
+    val modifiedAtMillis: Long,
+    val hasExposure: Boolean,
+    val exposureLine: String,
     val markedForDeletion: Boolean
 )
 
@@ -38,6 +45,7 @@ data class PhotoSelectionState(
 class PhotoSelectionViewModel(
     private val groupId: String,
     private val taskRepository: TaskRepository,
+    private val photoExifReader: PhotoExifReader,
     userSettingsRepository: UserSettingsRepository
 ) : ViewModel() {
     val state: StateFlow<PhotoSelectionState> = combine(
@@ -67,14 +75,30 @@ class PhotoSelectionViewModel(
         viewModelScope.launch { taskRepository.setMarkedForDeletion(photoId, false) }
     }
 
+    fun refreshExposureIfMissing(photo: PhotoSelectionItem) {
+        if (photo.hasExposure) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val metadata = photoExifReader.read(Uri.parse(photo.uri), photo.modifiedAtMillis)
+            if (metadata.hasExposure) {
+                taskRepository.updateExposureMetadata(
+                    jpgUri = photo.id,
+                    aperture = metadata.aperture,
+                    shutterSpeedSeconds = metadata.shutterSpeedSeconds,
+                    iso = metadata.iso
+                )
+            }
+        }
+    }
+
     class Factory(
         private val groupId: String,
         private val taskRepository: TaskRepository,
+        private val photoExifReader: PhotoExifReader,
         private val userSettingsRepository: UserSettingsRepository
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return PhotoSelectionViewModel(groupId, taskRepository, userSettingsRepository) as T
+            return PhotoSelectionViewModel(groupId, taskRepository, photoExifReader, userSettingsRepository) as T
         }
     }
 }
@@ -83,8 +107,19 @@ private fun PhotoEntity.toUiPhoto(): PhotoSelectionItem {
     return PhotoSelectionItem(
         id = jpgUri,
         uri = jpgUri,
-        timestamp = formatLocalPhotoTime(capturedAtMillis),
-        hasRaw = rawUri != null,
+        fileName = fileName,
+        fileNameLine = "$fileName · RAW: ${if (rawUri != null) "有" else "无"}",
+        modifiedAtMillis = modifiedAtMillis,
+        hasExposure = aperture != null || shutterSpeedSeconds != null || iso != null,
+        exposureLine = buildExposureLine(),
         markedForDeletion = markedForDeletion
     )
+}
+
+private fun PhotoEntity.buildExposureLine(): String {
+    return listOfNotNull(
+        formatAperture(aperture),
+        formatShutterSpeed(shutterSpeedSeconds),
+        formatIso(iso)
+    ).joinToString(" · ")
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import com.snapsort.app.data.db.SnapSortDatabase
 import com.snapsort.app.data.repository.TaskRepository
 import com.snapsort.app.data.scanner.FolderScanner
+import com.snapsort.app.data.scanner.PhotoExifReader
 import com.snapsort.app.data.settings.UserSettingsRepository
 
 object SnapSortDependencies {
@@ -17,5 +18,9 @@ object SnapSortDependencies {
 
     fun folderScanner(context: Context): FolderScanner {
         return FolderScanner(context.applicationContext)
+    }
+
+    fun photoExifReader(context: Context): PhotoExifReader {
+        return PhotoExifReader(context.applicationContext)
     }
 }

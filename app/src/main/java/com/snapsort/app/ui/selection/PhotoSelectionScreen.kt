@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -33,6 +34,7 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,6 +54,7 @@ fun PhotoSelectionScreen(
         factory = PhotoSelectionViewModel.Factory(
             groupId = groupId,
             taskRepository = SnapSortDependencies.taskRepository(LocalContext.current),
+            photoExifReader = SnapSortDependencies.photoExifReader(LocalContext.current),
             userSettingsRepository = SnapSortDependencies.userSettingsRepository(LocalContext.current)
         )
     ),
@@ -72,6 +75,9 @@ fun PhotoSelectionScreen(
 
     val currentPhoto = group.photos.getOrNull(pagerState.currentPage)
     val isMarkedForDeletion = currentPhoto?.markedForDeletion ?: false
+    LaunchedEffect(currentPhoto?.id) {
+        currentPhoto?.let(viewModel::refreshExposureIfMissing)
+    }
 
     var showOverlay by remember { mutableStateOf(true) }
     var transformActive by remember { mutableStateOf(false) }
@@ -90,35 +96,16 @@ fun PhotoSelectionScreen(
         containerColor = previewBackgroundColor,
         topBar = {
             if (showOverlay) {
-            TopAppBar(
-                modifier = Modifier.alpha(controlsAlpha),
-                title = {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "${group.title} ${pagerState.currentPage + 1}/${group.photos.size}",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        if (currentPhoto != null) {
-                            Text(
-                                text = "${currentPhoto.timestamp} · RAW: ${if (currentPhoto.hasRaw) "有" else "无"}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onDone) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回工作台")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
+                SelectionTopBar(
+                    modifier = Modifier.alpha(controlsAlpha),
+                    groupTitle = group.title,
+                    currentIndex = pagerState.currentPage + 1,
+                    totalCount = group.photos.size,
+                    photo = currentPhoto,
                     containerColor = overlayColor,
-                    titleContentColor = overlayContentColor,
-                    navigationIconContentColor = overlayContentColor,
-                    actionIconContentColor = overlayContentColor
+                    contentColor = overlayContentColor,
+                    onBack = onDone
                 )
-            )
             }
         },
         bottomBar = {
@@ -346,7 +333,7 @@ fun PhotoSelectionScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .windowInsetsPadding(WindowInsets.systemBars)
-                                .padding(top = 64.dp, end = 16.dp),
+                                .padding(top = DeleteBadgeTopPadding, end = 16.dp),
                             contentAlignment = Alignment.TopEnd
                         ) {
                             Surface(
@@ -389,6 +376,83 @@ fun PhotoSelectionScreen(
                     )
                 }
                 InputBlocker()
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectionTopBar(
+    modifier: Modifier = Modifier,
+    groupTitle: String,
+    currentIndex: Int,
+    totalCount: Int,
+    photo: PhotoSelectionItem?,
+    containerColor: Color,
+    contentColor: Color,
+    onBack: () -> Unit
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = containerColor,
+        contentColor = contentColor
+    ) {
+        Row(
+            modifier = Modifier
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .heightIn(min = 72.dp)
+                .padding(start = 4.dp, top = 6.dp, end = 16.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回工作台")
+            }
+            Spacer(Modifier.width(4.dp))
+            SelectionTopBarTitle(
+                modifier = Modifier.weight(1f),
+                groupTitle = groupTitle,
+                currentIndex = currentIndex,
+                totalCount = totalCount,
+                photo = photo
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectionTopBarTitle(
+    modifier: Modifier = Modifier,
+    groupTitle: String,
+    currentIndex: Int,
+    totalCount: Int,
+    photo: PhotoSelectionItem?
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(1.dp)
+    ) {
+        Text(
+            text = "$groupTitle $currentIndex/$totalCount",
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        if (photo != null) {
+            Text(
+                text = photo.fileNameLine,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (photo.exposureLine.isNotEmpty()) {
+                Text(
+                    text = photo.exposureLine,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -499,3 +563,5 @@ private fun lerp(start: Rect, stop: Rect, fraction: Float): Rect {
 private fun lerp(start: Float, stop: Float, fraction: Float): Float {
     return start + (stop - start) * fraction
 }
+
+private val DeleteBadgeTopPadding = 88.dp

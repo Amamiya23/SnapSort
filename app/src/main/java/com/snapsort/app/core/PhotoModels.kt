@@ -31,6 +31,9 @@ data class ScannedPhoto(
     val extension: String,
     val capturedAtMillis: Long,
     val captureTimeSource: CaptureTimeSource,
+    val aperture: Double?,
+    val shutterSpeedSeconds: Double?,
+    val iso: Int?,
     val modifiedAtMillis: Long,
     val rawMatch: RawMatch?
 )

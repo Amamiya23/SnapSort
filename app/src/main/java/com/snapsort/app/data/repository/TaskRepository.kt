@@ -120,6 +120,10 @@ class TaskRepository(
             }
         }
     }
+
+    suspend fun updateExposureMetadata(jpgUri: String, aperture: Double?, shutterSpeedSeconds: Double?, iso: Int?) {
+        dao.updateExposureMetadata(jpgUri, aperture, shutterSpeedSeconds, iso)
+    }
 }
 
 private fun ScannedPhoto.toEntity(
@@ -136,6 +140,9 @@ private fun ScannedPhoto.toEntity(
         extension = extension,
         capturedAtMillis = capturedAtMillis,
         captureTimeSource = captureTimeSource.name,
+        aperture = aperture,
+        shutterSpeedSeconds = shutterSpeedSeconds,
+        iso = iso,
         modifiedAtMillis = modifiedAtMillis,
         rawUri = rawMatch?.uri,
         rawFileName = rawMatch?.fileName,

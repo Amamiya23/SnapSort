@@ -5,8 +5,6 @@ import android.net.Uri
 import android.os.SystemClock
 import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
-import androidx.exifinterface.media.ExifInterface
-import com.snapsort.app.core.CaptureTimeSource
 import com.snapsort.app.core.ScannedFile
 import com.snapsort.app.core.ScannedPhoto
 import com.snapsort.app.core.SortDirection
@@ -18,8 +16,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 data class ScanSettings(
     val burstThresholdMillis: Long,
@@ -46,6 +42,8 @@ sealed class ScanEvent {
 class FolderScanner(
     private val context: Context
 ) {
+    private val exifReader = PhotoExifReader(context)
+
     fun scan(folderUri: Uri, settings: ScanSettings): Flow<ScanEvent> = flow {
         val folder = DocumentFile.fromTreeUri(context, folderUri)
         if (folder == null || !folder.isDirectory) {
@@ -82,15 +80,18 @@ class FolderScanner(
                 lastProgressAtMillis = now
                 lastProgressIndex = processed
             }
-            val captureTime = readCaptureTime(Uri.parse(jpg.uri), jpg.modifiedAtMillis)
+            val photoMetadata = exifReader.read(Uri.parse(jpg.uri), jpg.modifiedAtMillis)
             photos.add(
                 ScannedPhoto(
                     jpgUri = jpg.uri,
                     fileName = jpg.fileName,
                     baseName = jpg.baseName,
                     extension = jpg.extension,
-                    capturedAtMillis = captureTime.millis,
-                    captureTimeSource = captureTime.source,
+                    capturedAtMillis = photoMetadata.capturedAtMillis,
+                    captureTimeSource = photoMetadata.captureTimeSource,
+                    aperture = photoMetadata.aperture,
+                    shutterSpeedSeconds = photoMetadata.shutterSpeedSeconds,
+                    iso = photoMetadata.iso,
                     modifiedAtMillis = jpg.modifiedAtMillis,
                     rawMatch = rawMatches[jpg.uri]
                 )
@@ -162,31 +163,8 @@ class FolderScanner(
             }
     }
 
-    private fun readCaptureTime(uri: Uri, modifiedAtMillis: Long): CaptureTime {
-        return try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val exif = ExifInterface(inputStream)
-                val dateTimeOriginal = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
-                val parsed = dateTimeOriginal?.let { exifDateFormat.parse(it)?.time }
-                if (parsed != null) {
-                    CaptureTime(parsed, CaptureTimeSource.EXIF)
-                } else {
-                    CaptureTime(modifiedAtMillis, CaptureTimeSource.MODIFIED_TIME)
-                }
-            } ?: CaptureTime(modifiedAtMillis, CaptureTimeSource.MODIFIED_TIME)
-        } catch (_: Exception) {
-            CaptureTime(modifiedAtMillis, CaptureTimeSource.MODIFIED_TIME)
-        }
-    }
-
-    private data class CaptureTime(
-        val millis: Long,
-        val source: CaptureTimeSource
-    )
-
     companion object {
         private const val PROGRESS_BATCH_SIZE = 32
         private const val PROGRESS_MIN_INTERVAL_MILLIS = 120L
-        private val exifDateFormat = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
     }
 }
