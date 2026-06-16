@@ -99,7 +99,10 @@ Ignored Claude, Codex, Trellis, and Agents local directories for the public repo
 
 ### Main Changes
 
-(Add details)
+- Added persisted nullable exposure fields for aperture, shutter speed, and ISO.
+- Added shared EXIF reader used by scanning and selection-screen backfill.
+- Updated photo selection top metadata to show file name, RAW state, and available exposure values without showing capture time.
+- Added exposure formatting helpers and unit tests.
 
 ### Git Commits
 
@@ -111,7 +114,9 @@ Ignored Claude, Codex, Trellis, and Agents local directories for the public repo
 
 ### Testing
 
-- [OK] (Add test results)
+- [OK] `/home/cat/.gradle/wrapper/dists/gradle-8.12-all/btiplb0pmjji56hfpl9949cgc/gradle-8.12/bin/gradle :app:compileDebugKotlin`
+- [OK] `/home/cat/.gradle/wrapper/dists/gradle-8.12-all/btiplb0pmjji56hfpl9949cgc/gradle-8.12/bin/gradle :app:testDebugUnitTest`
+- [OK] `git diff --check`
 
 ### Status
 
@@ -141,6 +146,39 @@ Implemented and tuned settings screen edge stretch overscroll to avoid whole-scr
 | Hash | Message |
 |------|---------|
 | `ac8db4d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 5: Photo selection EXIF metadata
+
+**Date**: 2026-06-16
+**Task**: Photo selection EXIF metadata
+**Branch**: `main`
+
+### Summary
+
+Added photo selection metadata display for file name, RAW status, and EXIF exposure values, with Room migration and background backfill for existing scans.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8478499` | (see git log) |
 
 ### Testing
 
