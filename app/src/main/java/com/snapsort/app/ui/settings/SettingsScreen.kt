@@ -1,5 +1,8 @@
 package com.snapsort.app.ui.settings
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
@@ -14,11 +17,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -78,11 +83,14 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModel.Factory(
-            SnapSortDependencies.userSettingsRepository(LocalContext.current)
+            repository = SnapSortDependencies.userSettingsRepository(LocalContext.current),
+            updateRepository = SnapSortDependencies.updateRepository()
         )
     )
 ) {
+    val context = LocalContext.current
     val settings by viewModel.settings.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val maxOverscrollOffsetPx = with(LocalDensity.current) { 40.dp.toPx() }
     var burstSheetOpen by remember { mutableStateOf(false) }
@@ -275,6 +283,24 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            item {
+                SettingsSectionCard(title = "应用更新") {
+                    UpdateCheckSection(
+                        state = updateState,
+                        onCheck = viewModel::checkForUpdates,
+                        onOpenRelease = { releaseUrl ->
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)))
+                            } catch (_: ActivityNotFoundException) {
+                                viewModel.onReleaseOpenFailed()
+                            } catch (_: SecurityException) {
+                                viewModel.onReleaseOpenFailed()
+                            }
+                        }
+                    )
+                }
+            }
         }
     }
 
@@ -316,6 +342,57 @@ fun SettingsScreen(
             }
         )
     }
+}
+
+@Composable
+private fun UpdateCheckSection(
+    state: UpdateUiState,
+    onCheck: () -> Unit,
+    onOpenRelease: (String) -> Unit
+) {
+    SelectionRow(
+        title = "检查更新",
+        description = updateDescription(state),
+        value = updateValue(state),
+        enabled = state !is UpdateUiState.Checking,
+        onClick = onCheck
+    )
+
+    if (state is UpdateUiState.Available) {
+        CardRowDivider()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(onClick = { onOpenRelease(state.releaseUrl) }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("前往下载")
+            }
+        }
+    }
+}
+
+private fun updateDescription(state: UpdateUiState): String = when (state) {
+    is UpdateUiState.Idle -> "当前版本 ${state.currentVersionName}"
+    is UpdateUiState.Checking -> "正在连接 GitHub..."
+    is UpdateUiState.UpToDate -> "当前版本 ${state.currentVersionName}"
+    is UpdateUiState.Available -> "当前版本 ${state.currentVersionName}，最新版本 ${state.latestVersionName}"
+    is UpdateUiState.Failed -> state.message
+}
+
+private fun updateValue(state: UpdateUiState): String = when (state) {
+    is UpdateUiState.Idle -> "检查"
+    is UpdateUiState.Checking -> "检查中"
+    is UpdateUiState.UpToDate -> "已是最新"
+    is UpdateUiState.Available -> "可更新"
+    is UpdateUiState.Failed -> "重试"
 }
 
 private data class SettingOption<T>(

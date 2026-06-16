@@ -6,6 +6,7 @@ import com.snapsort.app.data.repository.TaskRepository
 import com.snapsort.app.data.scanner.FolderScanner
 import com.snapsort.app.data.scanner.PhotoExifReader
 import com.snapsort.app.data.settings.UserSettingsRepository
+import com.snapsort.app.data.update.UpdateRepository
 
 object SnapSortDependencies {
     fun taskRepository(context: Context): TaskRepository {
@@ -22,5 +23,9 @@ object SnapSortDependencies {
 
     fun photoExifReader(context: Context): PhotoExifReader {
         return PhotoExifReader(context.applicationContext)
+    }
+
+    fun updateRepository(): UpdateRepository {
+        return UpdateRepository()
     }
 }
