@@ -9,15 +9,16 @@ asset_label="${ASSET_LABEL:-}"
 repo="${GH_REPO:-}"
 release_notes="${RELEASE_NOTES:-}"
 release_notes_file="${RELEASE_NOTES_FILE:-}"
-clobber=false
+clobber=true
 verify_tag=false
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/upload-release-apk.sh <tag> [--apk APK_PATH] [--repo OWNER/REPO] [--label LABEL] [--notes NOTES|--notes-file FILE] [--clobber] [--verify-tag]
+Usage: scripts/upload-release-apk.sh <tag> [--apk APK_PATH] [--repo OWNER/REPO] [--label LABEL] [--notes NOTES|--notes-file FILE] [--clobber|--no-clobber] [--verify-tag]
 
 Upload a compiled SnapSort APK to a GitHub Release using gh, with optional release notes update.
 If the release does not exist, the script creates it.
+If an asset with the same name already exists, the script overwrites it by default.
 
 Arguments:
   tag                   Git tag for the target GitHub Release
@@ -28,7 +29,8 @@ Options:
   --label LABEL         Display label for the uploaded release asset
   --notes NOTES         Replace release notes with this text before uploading the APK
   --notes-file FILE     Replace release notes from a Markdown file before uploading the APK
-  --clobber             Overwrite an existing release asset with the same name
+  --clobber             Overwrite an existing release asset with the same name (default)
+  --no-clobber          Fail if an existing release asset has the same name
   --verify-tag          When creating a release, fail if the git tag does not already exist
   -h, --help            Show this help
 
@@ -92,6 +94,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --clobber)
       clobber=true
+      shift
+      ;;
+    --no-clobber)
+      clobber=false
       shift
       ;;
     --verify-tag)

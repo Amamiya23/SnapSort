@@ -109,10 +109,10 @@ scripts/upload-release-apk.sh v2.1 --notes "修复照片选择体验，并优化
 scripts/upload-release-apk.sh v2.1 --repo OWNER/REPO
 ```
 
-覆盖同名 asset：
+如果同名 asset 已经存在，脚本默认覆盖上传。需要禁止覆盖时：
 
 ```bash
-scripts/upload-release-apk.sh v2.1 --clobber
+scripts/upload-release-apk.sh v2.1 --no-clobber
 ```
 
 要求 Git tag 必须已经存在，否则不创建 release：
