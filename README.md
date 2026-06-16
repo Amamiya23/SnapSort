@@ -82,11 +82,14 @@ app/build/outputs/apk/release/
 scripts/build-apk.sh --release --name v2.1
 ```
 
-再把 APK 上传到已有的 GitHub Release：
+再把 APK 上传到 GitHub Release：
 
 ```bash
 scripts/upload-release-apk.sh v2.1
 ```
+
+如果目标 release 不存在，脚本会自动创建 release 并上传 APK。默认沿用 `gh release create`
+的行为：当 Git tag 不存在时，GitHub CLI 会从默认分支自动创建 tag。
 
 同时用 Markdown 文件更新 release 说明：
 
@@ -110,4 +113,10 @@ scripts/upload-release-apk.sh v2.1 --repo OWNER/REPO
 
 ```bash
 scripts/upload-release-apk.sh v2.1 --clobber
+```
+
+要求 Git tag 必须已经存在，否则不创建 release：
+
+```bash
+scripts/upload-release-apk.sh v2.1 --verify-tag
 ```

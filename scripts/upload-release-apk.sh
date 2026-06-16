@@ -10,12 +10,14 @@ repo="${GH_REPO:-}"
 release_notes="${RELEASE_NOTES:-}"
 release_notes_file="${RELEASE_NOTES_FILE:-}"
 clobber=false
+verify_tag=false
 
 usage() {
   cat <<'USAGE'
-Usage: scripts/upload-release-apk.sh <tag> [--apk APK_PATH] [--repo OWNER/REPO] [--label LABEL] [--notes NOTES|--notes-file FILE] [--clobber]
+Usage: scripts/upload-release-apk.sh <tag> [--apk APK_PATH] [--repo OWNER/REPO] [--label LABEL] [--notes NOTES|--notes-file FILE] [--clobber] [--verify-tag]
 
-Upload a compiled SnapSort APK to an existing GitHub Release using gh, with optional release notes update.
+Upload a compiled SnapSort APK to a GitHub Release using gh, with optional release notes update.
+If the release does not exist, the script creates it.
 
 Arguments:
   tag                   Git tag for the target GitHub Release
@@ -27,6 +29,7 @@ Options:
   --notes NOTES         Replace release notes with this text before uploading the APK
   --notes-file FILE     Replace release notes from a Markdown file before uploading the APK
   --clobber             Overwrite an existing release asset with the same name
+  --verify-tag          When creating a release, fail if the git tag does not already exist
   -h, --help            Show this help
 
 Environment:
@@ -89,6 +92,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --clobber)
       clobber=true
+      shift
+      ;;
+    --verify-tag)
+      verify_tag=true
       shift
       ;;
     -h|--help)
@@ -168,18 +175,36 @@ if [[ -n "$asset_label" ]]; then
   echo "Asset label: $asset_label"
 fi
 
+notes_args=()
 if [[ -n "$release_notes" ]]; then
-  echo "Updating release notes from --notes"
-  gh release edit "$tag" --notes "$release_notes" "${repo_args[@]}"
+  notes_args+=(--notes "$release_notes")
 elif [[ -n "$release_notes_file" ]]; then
-  echo "Updating release notes from: $release_notes_file"
-  gh release edit "$tag" --notes-file "$release_notes_file" "${repo_args[@]}"
+  notes_args+=(--notes-file "$release_notes_file")
 fi
 
-gh_args=(release upload "$tag" "$asset")
-if [[ "$clobber" == true ]]; then
-  gh_args+=(--clobber)
-fi
-gh_args+=("${repo_args[@]}")
+if gh release view "$tag" "${repo_args[@]}" >/dev/null 2>&1; then
+  if [[ ${#notes_args[@]} -gt 0 ]]; then
+    if [[ -n "$release_notes" ]]; then
+      echo "Updating release notes from --notes"
+    else
+      echo "Updating release notes from: $release_notes_file"
+    fi
+    gh release edit "$tag" "${notes_args[@]}" "${repo_args[@]}"
+  fi
 
-gh "${gh_args[@]}"
+  gh_args=(release upload "$tag" "$asset")
+  if [[ "$clobber" == true ]]; then
+    gh_args+=(--clobber)
+  fi
+  gh_args+=("${repo_args[@]}")
+  gh "${gh_args[@]}"
+else
+  echo "Release not found. Creating GitHub Release: $tag"
+  gh_args=(release create "$tag" "$asset")
+  gh_args+=("${notes_args[@]}")
+  if [[ "$verify_tag" == true ]]; then
+    gh_args+=(--verify-tag)
+  fi
+  gh_args+=("${repo_args[@]}")
+  gh "${gh_args[@]}"
+fi
