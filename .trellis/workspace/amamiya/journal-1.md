@@ -139,7 +139,11 @@ Implemented and tuned settings screen edge stretch overscroll to avoid whole-scr
 
 ### Main Changes
 
-(Add details)
+- Added `UpdateRepository` to fetch the latest GitHub Release for `Amamiya23/SnapSort`.
+- Added version comparison for timestamp, semantic, numeric, and unknown release tags.
+- Added Settings UI state for checking, latest, update available, and retryable failures.
+- Added browser handoff to the GitHub release page for APK download.
+- Enabled `BuildConfig` and added the Android `INTERNET` permission.
 
 ### Git Commits
 
@@ -149,7 +153,8 @@ Implemented and tuned settings screen edge stretch overscroll to avoid whole-scr
 
 ### Testing
 
-- [OK] (Add test results)
+- [OK] `/home/cat/.gradle/wrapper/dists/gradle-8.12-all/btiplb0pmjji56hfpl9949cgc/gradle-8.12/bin/gradle :app:compileDebugKotlin`
+- [OK] `/home/cat/.gradle/wrapper/dists/gradle-8.12-all/btiplb0pmjji56hfpl9949cgc/gradle-8.12/bin/gradle :app:testDebugUnitTest`
 
 ### Status
 
@@ -179,6 +184,39 @@ Added photo selection metadata display for file name, RAW status, and EXIF expos
 | Hash | Message |
 |------|---------|
 | `8478499` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 6: GitHub release update check
+
+**Date**: 2026-06-16
+**Task**: GitHub release update check
+**Branch**: `main`
+
+### Summary
+
+Added manual Settings update check via GitHub Releases, with version comparison tests, browser handoff, and network permission.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b7f880a` | (see git log) |
 
 ### Testing
 
