@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -39,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -96,6 +98,7 @@ fun SettingsScreen(
     var burstSheetOpen by remember { mutableStateOf(false) }
     var looseGroupSheetOpen by remember { mutableStateOf(false) }
     var themeSheetOpen by remember { mutableStateOf(false) }
+    var updateDialogOpen by remember { mutableStateOf(false) }
     var overscrollOffsetPx by remember { mutableFloatStateOf(0f) }
     var releaseAnimationJob by remember { mutableStateOf<Job?>(null) }
     val thresholds = listOf(500L, 1_000L, 2_000L, 3_000L, 5_000L)
@@ -188,6 +191,20 @@ fun SettingsScreen(
             }
         }
     }
+    val openRelease: (String) -> Unit = { releaseUrl ->
+        updateDialogOpen = false
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)))
+        } catch (_: ActivityNotFoundException) {
+            viewModel.onReleaseOpenFailed()
+        } catch (_: SecurityException) {
+            viewModel.onReleaseOpenFailed()
+        }
+    }
+
+    LaunchedEffect(updateState) {
+        updateDialogOpen = updateState is UpdateUiState.Available
+    }
 
     Scaffold(
         topBar = {
@@ -220,6 +237,16 @@ fun SettingsScreen(
             contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                SettingsSectionCard(title = "主题") {
+                    SelectionRow(
+                        title = "界面外观",
+                        value = themeOptions.first { it.value == settings.themeMode }.label,
+                        onClick = { themeSheetOpen = true }
+                    )
+                }
+            }
+
             item {
                 SettingsSectionCard(title = "连拍阈值") {
                     SelectionRow(
@@ -275,29 +302,10 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsSectionCard(title = "主题") {
-                    SelectionRow(
-                        title = "界面外观",
-                        value = themeOptions.first { it.value == settings.themeMode }.label,
-                        onClick = { themeSheetOpen = true }
-                    )
-                }
-            }
-
-            item {
                 SettingsSectionCard(title = "应用更新") {
                     UpdateCheckSection(
                         state = updateState,
-                        onCheck = viewModel::checkForUpdates,
-                        onOpenRelease = { releaseUrl ->
-                            try {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(releaseUrl)))
-                            } catch (_: ActivityNotFoundException) {
-                                viewModel.onReleaseOpenFailed()
-                            } catch (_: SecurityException) {
-                                viewModel.onReleaseOpenFailed()
-                            }
-                        }
+                        onCheck = viewModel::checkForUpdates
                     )
                 }
             }
@@ -342,13 +350,21 @@ fun SettingsScreen(
             }
         )
     }
+
+    val availableUpdate = updateState as? UpdateUiState.Available
+    if (updateDialogOpen && availableUpdate != null) {
+        UpdateAvailableDialog(
+            state = availableUpdate,
+            onDismiss = { updateDialogOpen = false },
+            onOpenRelease = { openRelease(availableUpdate.releaseUrl) }
+        )
+    }
 }
 
 @Composable
 private fun UpdateCheckSection(
     state: UpdateUiState,
-    onCheck: () -> Unit,
-    onOpenRelease: (String) -> Unit
+    onCheck: () -> Unit
 ) {
     SelectionRow(
         title = "检查更新",
@@ -357,17 +373,26 @@ private fun UpdateCheckSection(
         enabled = state !is UpdateUiState.Checking,
         onClick = onCheck
     )
+}
 
-    if (state is UpdateUiState.Available) {
-        CardRowDivider()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TextButton(onClick = { onOpenRelease(state.releaseUrl) }) {
+@Composable
+private fun UpdateAvailableDialog(
+    state: UpdateUiState.Available,
+    onDismiss: () -> Unit,
+    onOpenRelease: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("发现新版本")
+        },
+        text = {
+            Text(
+                text = "当前版本 ${state.currentVersionName}，最新版本 ${state.latestVersionName}。\n将打开 GitHub Release 页面，由你手动下载 APK。"
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onOpenRelease) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                     contentDescription = null
@@ -375,8 +400,13 @@ private fun UpdateCheckSection(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("前往下载")
             }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("稍后")
+            }
         }
-    }
+    )
 }
 
 private fun updateDescription(state: UpdateUiState): String = when (state) {
