@@ -22,6 +22,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -215,7 +217,10 @@ fun PhotoSelectionScreen(
                     groupTitle = group.title,
                     currentIndex = pagerState.currentPage + 1,
                     totalCount = group.photos.size,
-                    onBack = onDone
+                    overlayVisible = showOverlay,
+                    toggleOverlayEnabled = controlsVisible && !openingTransitionActive,
+                    onBack = onDone,
+                    onToggleOverlay = { showOverlay = !showOverlay }
                 )
 
                 SelectionDotBar(
@@ -285,6 +290,24 @@ fun PhotoSelectionScreen(
                 )
             }
 
+            if (!showOverlay) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .height(56.dp)
+                        .padding(end = 4.dp)
+                        .alpha(controlsAlpha),
+                    contentAlignment = Alignment.Center
+                ) {
+                    OverlayVisibilityButton(
+                        overlayVisible = showOverlay,
+                        enabled = controlsVisible && !openingTransitionActive,
+                        onClick = { showOverlay = !showOverlay }
+                    )
+                }
+            }
+
             if (openingTransitionActive) {
                 openTransitionSpec?.let { transitionSpec ->
                     PhotoOpenTransitionOverlay(
@@ -302,12 +325,37 @@ fun PhotoSelectionScreen(
 }
 
 @Composable
+private fun OverlayVisibilityButton(
+    modifier: Modifier = Modifier,
+    overlayVisible: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val label = if (overlayVisible) "隐藏照片信息" else "显示照片信息"
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.size(48.dp)
+    ) {
+        Icon(
+            imageVector = if (overlayVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(22.dp)
+        )
+    }
+}
+
+@Composable
 private fun SelectionTopOverlay(
     modifier: Modifier = Modifier,
     groupTitle: String,
     currentIndex: Int,
     totalCount: Int,
-    onBack: () -> Unit
+    overlayVisible: Boolean,
+    toggleOverlayEnabled: Boolean,
+    onBack: () -> Unit,
+    onToggleOverlay: () -> Unit
 ) {
     val scrimColor = MaterialTheme.colorScheme.surface
     Box(
@@ -327,7 +375,7 @@ private fun SelectionTopOverlay(
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.statusBars)
                 .height(56.dp)
-                .padding(start = 4.dp, end = 16.dp),
+                .padding(start = 4.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
@@ -345,6 +393,11 @@ private fun SelectionTopOverlay(
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
+            )
+            OverlayVisibilityButton(
+                overlayVisible = overlayVisible,
+                enabled = toggleOverlayEnabled,
+                onClick = onToggleOverlay
             )
         }
     }
