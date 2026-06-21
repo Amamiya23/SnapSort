@@ -5,8 +5,12 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.IntentSenderRequest
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
@@ -25,17 +29,17 @@ import com.snapsort.app.ui.home.HomeScreen
 import com.snapsort.app.ui.scan.ScanProgressScreen
 import com.snapsort.app.ui.selection.PhotoSelectionScreen
 import com.snapsort.app.ui.settings.SettingsScreen
-import com.snapsort.app.ui.transition.PhotoOpenTransitionSpec
 
 private const val HomeRoute = "home"
 private const val GroupSelectionRoute = "group_selection/{groupId}"
+private const val GroupSelectionTransitionMillis = 260
+private const val GroupSelectionFadeMillis = 160
 
 @Composable
 fun SnapSortApp() {
     val navController = rememberNavController()
     val context = LocalContext.current
     var pendingFolderUri by remember { mutableStateOf<Uri?>(null) }
-    var pendingPhotoOpenTransition by remember { mutableStateOf<PhotoOpenTransitionSpec?>(null) }
     var deleteRequestLaunched by remember { mutableStateOf(false) }
     val deleteViewModel: DeleteViewModel = viewModel(
         factory = DeleteViewModel.Factory(
@@ -90,8 +94,7 @@ fun SnapSortApp() {
                     pendingFolderUri = Uri.parse(folderUri)
                     navController.navigate("scan_progress")
                 },
-                onOpenGroup = { groupId, transitionSpec ->
-                    pendingPhotoOpenTransition = transitionSpec
+                onOpenGroup = { groupId ->
                     navController.navigate("group_selection/$groupId")
                 },
                 onOpenSettings = { navController.navigate("settings") },
@@ -112,16 +115,24 @@ fun SnapSortApp() {
         }
         composable(
             route = GroupSelectionRoute,
-            enterTransition = { EnterTransition.None },
+            enterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                    animationSpec = tween(durationMillis = GroupSelectionTransitionMillis)
+                ) + fadeIn(animationSpec = tween(durationMillis = GroupSelectionFadeMillis))
+            },
             exitTransition = { ExitTransition.None },
             popEnterTransition = { EnterTransition.None },
-            popExitTransition = { ExitTransition.None }
+            popExitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                    animationSpec = tween(durationMillis = GroupSelectionTransitionMillis)
+                ) + fadeOut(animationSpec = tween(durationMillis = GroupSelectionFadeMillis))
+            }
         ) { backStackEntry ->
             val groupId = backStackEntry.arguments?.getString("groupId").orEmpty()
             PhotoSelectionScreen(
                 groupId = groupId,
-                openTransitionSpec = pendingPhotoOpenTransition,
-                onOpenTransitionFinished = { pendingPhotoOpenTransition = null },
                 onDone = { navController.popBackStack() }
             )
         }

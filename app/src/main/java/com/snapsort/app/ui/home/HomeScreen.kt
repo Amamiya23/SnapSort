@@ -22,10 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,7 +32,6 @@ import coil.compose.AsyncImage
 import com.snapsort.app.SnapSortDependencies
 import com.snapsort.app.ui.components.DeleteConfirmationSheet
 import com.snapsort.app.ui.components.DeleteFilePreview
-import com.snapsort.app.ui.transition.PhotoOpenTransitionSpec
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,7 +39,7 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     onSelectFolder: () -> Unit,
     onRescan: (String) -> Unit,
-    onOpenGroup: (String, PhotoOpenTransitionSpec?) -> Unit,
+    onOpenGroup: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onDeleteConfirmed: () -> Unit,
     deleteMessage: String? = null,
@@ -218,7 +214,7 @@ fun EmptyStateContent(
 @Composable
 fun ActiveStateContent(
     state: HomeUiState.Active,
-    onOpenGroup: (String, PhotoOpenTransitionSpec?) -> Unit,
+    onOpenGroup: (String) -> Unit,
     onFinish: () -> Unit
 ) {
     LazyColumn(
@@ -230,8 +226,8 @@ fun ActiveStateContent(
             TaskSummaryCard(state = state, onFinish = onFinish)
         }
         items(state.groups, key = { it.id }) { group ->
-            GroupItemCard(group = group, onClick = { transitionSpec ->
-                onOpenGroup(group.id, transitionSpec)
+            GroupItemCard(group = group, onClick = {
+                onOpenGroup(group.id)
             })
         }
     }
@@ -307,25 +303,12 @@ fun TaskSummaryCard(
 @Composable
 fun GroupItemCard(
     group: PhotoGroup,
-    onClick: (PhotoOpenTransitionSpec?) -> Unit
+    onClick: () -> Unit
 ) {
-    var coverBounds by remember(group.id) { mutableStateOf<Rect?>(null) }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
-                val transitionSpec = group.coverPhotoUri?.let { uri ->
-                    coverBounds?.let { bounds ->
-                        if (bounds.width > 0f && bounds.height > 0f) {
-                            PhotoOpenTransitionSpec(imageUri = uri, startBounds = bounds)
-                        } else {
-                            null
-                        }
-                    }
-                }
-                onClick(transitionSpec)
-            },
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -343,7 +326,6 @@ fun GroupItemCard(
                 contentDescription = "${if (group.type == GroupType.BURST) "连拍" else "散片"}分组封面",
                 modifier = Modifier
                     .size(88.dp)
-                    .onGloballyPositioned { coverBounds = it.boundsInWindow() }
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentScale = ContentScale.Crop

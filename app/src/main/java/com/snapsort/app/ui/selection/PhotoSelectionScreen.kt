@@ -1,15 +1,10 @@
 package com.snapsort.app.ui.selection
 
-import android.animation.ValueAnimator
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -32,16 +27,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.positionInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -52,10 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.snapsort.app.SnapSortDependencies
-import com.snapsort.app.ui.transition.PhotoOpenTransitionSpec
 
 import kotlin.math.abs
 import kotlinx.coroutines.launch
@@ -64,8 +50,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun PhotoSelectionScreen(
     groupId: String,
-    openTransitionSpec: PhotoOpenTransitionSpec? = null,
-    onOpenTransitionFinished: () -> Unit = {},
     viewModel: PhotoSelectionViewModel = viewModel(
         factory = PhotoSelectionViewModel.Factory(
             groupId = groupId,
@@ -97,13 +81,6 @@ fun PhotoSelectionScreen(
 
     var showOverlay by remember { mutableStateOf(true) }
     var transformActive by remember { mutableStateOf(false) }
-    var openingTransitionActive by remember(openTransitionSpec) { mutableStateOf(openTransitionSpec != null) }
-    var controlsVisible by remember(openTransitionSpec) { mutableStateOf(openTransitionSpec == null) }
-    val controlsAlpha by animateFloatAsState(
-        targetValue = if (controlsVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = 140, delayMillis = if (controlsVisible) 40 else 0),
-        label = "selection-controls-alpha"
-    )
     val previewBackgroundColor = MaterialTheme.colorScheme.background
 
     Box(
@@ -114,7 +91,7 @@ fun PhotoSelectionScreen(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = !transformActive && !openingTransitionActive
+                userScrollEnabled = !transformActive
             ) { page ->
                 val photo = group.photos[page]
                 val isDeleted = photo.markedForDeletion
@@ -127,11 +104,10 @@ fun PhotoSelectionScreen(
                         model = photo.uri,
                         modifier = Modifier.fillMaxSize(),
                         contentDescription = "当前照片 ${page + 1}/${group.photos.size}",
-                        onTap = { if (!openingTransitionActive) showOverlay = !showOverlay },
-                        onTransformActiveChange = { if (!openingTransitionActive) transformActive = it },
-                        onSwipeProgress = { if (!openingTransitionActive && state.gestureShortcutEnabled) dragOffsetY = it },
+                        onTap = { showOverlay = !showOverlay },
+                        onTransformActiveChange = { transformActive = it },
+                        onSwipeProgress = { if (state.gestureShortcutEnabled) dragOffsetY = it },
                         onSwipeEnd = {
-                            if (openingTransitionActive) return@ZoomableImage
                             if (!state.gestureShortcutEnabled) return@ZoomableImage
                             val shouldTrigger = abs(it) >= gestureThreshold
                             if (shouldTrigger) {
@@ -213,12 +189,10 @@ fun PhotoSelectionScreen(
 
             if (showOverlay) {
                 SelectionTopOverlay(
-                    modifier = Modifier.alpha(controlsAlpha),
                     groupTitle = group.title,
                     currentIndex = pagerState.currentPage + 1,
                     totalCount = group.photos.size,
                     overlayVisible = showOverlay,
-                    toggleOverlayEnabled = controlsVisible && !openingTransitionActive,
                     onBack = onDone,
                     onToggleOverlay = { showOverlay = !showOverlay }
                 )
@@ -227,11 +201,9 @@ fun PhotoSelectionScreen(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(top = 58.dp)
-                        .alpha(controlsAlpha),
+                        .padding(top = 58.dp),
                     photos = group.photos,
                     currentIndex = pagerState.currentPage,
-                    enabled = controlsVisible && !openingTransitionActive,
                     onSelect = { index ->
                         if (index != pagerState.currentPage) {
                             coroutineScope.launch { pagerState.animateScrollToPage(index) }
@@ -245,20 +217,16 @@ fun PhotoSelectionScreen(
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
                             .padding(horizontal = 20.dp)
-                            .padding(bottom = SelectionBottomBarHeight + 6.dp)
-                            .alpha(controlsAlpha),
+                            .padding(bottom = SelectionBottomBarHeight + 6.dp),
                         photo = photo
                     )
                 }
 
                 SelectionBottomBar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .alpha(controlsAlpha),
+                    modifier = Modifier.align(Alignment.BottomCenter),
                     canGoPrevious = pagerState.currentPage > 0,
                     canGoNext = pagerState.currentPage < group.photos.size - 1,
                     isMarkedForDeletion = isMarkedForDeletion,
-                    enabled = controlsVisible && !openingTransitionActive,
                     onPrevious = {
                         if (pagerState.currentPage > 0) {
                             coroutineScope.launch {
@@ -296,30 +264,14 @@ fun PhotoSelectionScreen(
                         .align(Alignment.TopEnd)
                         .windowInsetsPadding(WindowInsets.statusBars)
                         .height(56.dp)
-                        .padding(end = 4.dp)
-                        .alpha(controlsAlpha),
+                        .padding(end = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     OverlayVisibilityButton(
                         overlayVisible = showOverlay,
-                        enabled = controlsVisible && !openingTransitionActive,
                         onClick = { showOverlay = !showOverlay }
                     )
                 }
-            }
-
-            if (openingTransitionActive) {
-                openTransitionSpec?.let { transitionSpec ->
-                    PhotoOpenTransitionOverlay(
-                        transitionSpec = transitionSpec,
-                        onAnimationFinished = {
-                            openingTransitionActive = false
-                            controlsVisible = true
-                            onOpenTransitionFinished()
-                        }
-                    )
-                }
-                InputBlocker()
             }
     }
 }
@@ -328,13 +280,11 @@ fun PhotoSelectionScreen(
 private fun OverlayVisibilityButton(
     modifier: Modifier = Modifier,
     overlayVisible: Boolean,
-    enabled: Boolean,
     onClick: () -> Unit
 ) {
     val label = if (overlayVisible) "隐藏照片信息" else "显示照片信息"
     IconButton(
         onClick = onClick,
-        enabled = enabled,
         modifier = modifier.size(48.dp)
     ) {
         Icon(
@@ -353,7 +303,6 @@ private fun SelectionTopOverlay(
     currentIndex: Int,
     totalCount: Int,
     overlayVisible: Boolean,
-    toggleOverlayEnabled: Boolean,
     onBack: () -> Unit,
     onToggleOverlay: () -> Unit
 ) {
@@ -396,7 +345,6 @@ private fun SelectionTopOverlay(
             )
             OverlayVisibilityButton(
                 overlayVisible = overlayVisible,
-                enabled = toggleOverlayEnabled,
                 onClick = onToggleOverlay
             )
         }
@@ -408,7 +356,6 @@ private fun SelectionDotBar(
     modifier: Modifier = Modifier,
     photos: List<PhotoSelectionItem>,
     currentIndex: Int,
-    enabled: Boolean,
     onSelect: (Int) -> Unit
 ) {
     Row(
@@ -444,7 +391,7 @@ private fun SelectionDotBar(
                         contentDescription = label
                         role = Role.Button
                     }
-                    .clickable(enabled = enabled, role = Role.Button) { onSelect(index) },
+                    .clickable(role = Role.Button) { onSelect(index) },
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -542,7 +489,6 @@ private fun SelectionBottomBar(
     canGoPrevious: Boolean,
     canGoNext: Boolean,
     isMarkedForDeletion: Boolean,
-    enabled: Boolean,
     onPrevious: () -> Unit,
     onToggleDelete: () -> Unit,
     onNext: () -> Unit
@@ -563,7 +509,7 @@ private fun SelectionBottomBar(
             SelectionBarAction(
                 modifier = Modifier.weight(1f),
                 label = "上一张",
-                enabled = enabled && canGoPrevious,
+                enabled = canGoPrevious,
                 onClick = onPrevious
             ) {
                 Icon(
@@ -575,7 +521,7 @@ private fun SelectionBottomBar(
             SelectionBarAction(
                 modifier = Modifier.weight(1f),
                 label = if (isMarkedForDeletion) "恢复保留" else "标记删除",
-                enabled = enabled,
+                enabled = true,
                 danger = true,
                 active = isMarkedForDeletion,
                 onClick = onToggleDelete
@@ -589,7 +535,7 @@ private fun SelectionBottomBar(
             SelectionBarAction(
                 modifier = Modifier.weight(1f),
                 label = "下一张",
-                enabled = enabled && canGoNext,
+                enabled = canGoNext,
                 onClick = onNext
             ) {
                 Icon(
@@ -688,112 +634,6 @@ private fun MarkedForDeleteOverlay() {
             }
         }
     }
-}
-
-@Composable
-private fun PhotoOpenTransitionOverlay(
-    transitionSpec: PhotoOpenTransitionSpec,
-    onAnimationFinished: () -> Unit
-) {
-    val progress = remember(transitionSpec) { Animatable(0f) }
-    var rootOffset by remember { mutableStateOf(Offset.Zero) }
-    val transitionDurationMillis = if (ValueAnimator.areAnimatorsEnabled()) 260 else 0
-    val density = LocalDensity.current
-
-    LaunchedEffect(transitionSpec) {
-        progress.snapTo(0f)
-        if (transitionDurationMillis == 0) {
-            progress.snapTo(1f)
-        } else {
-            progress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(
-                    durationMillis = transitionDurationMillis,
-                    easing = OpenPhotoEasing
-                )
-            )
-        }
-        onAnimationFinished()
-    }
-
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .onGloballyPositioned { rootOffset = it.positionInWindow() }
-    ) {
-        val startBounds = transitionSpec.startBounds.translate(-rootOffset.x, -rootOffset.y)
-        val endBounds = Rect(
-            left = 0f,
-            top = 0f,
-            right = constraints.maxWidth.toFloat(),
-            bottom = constraints.maxHeight.toFloat()
-        )
-        val animatedBounds = lerp(startBounds, endBounds, progress.value)
-        val fitAlpha = progress.value.coerceIn(0f, 1f)
-        val cropAlpha = (1f - progress.value * 1.35f).coerceIn(0f, 1f)
-
-        Box(
-            modifier = Modifier
-                .graphicsLayer {
-                    translationX = animatedBounds.left
-                    translationY = animatedBounds.top
-                }
-                .size(
-                    width = with(density) { animatedBounds.width.toDp() },
-                    height = with(density) { animatedBounds.height.toDp() }
-                )
-        ) {
-            AsyncImage(
-                model = transitionSpec.imageUri,
-                contentDescription = null,
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(cropAlpha),
-                contentScale = ContentScale.Crop
-            )
-            AsyncImage(
-                model = transitionSpec.imageUri,
-                contentDescription = null,
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(fitAlpha),
-                contentScale = ContentScale.Fit
-            )
-        }
-    }
-}
-
-@Composable
-private fun InputBlocker() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    do {
-                        val event = awaitPointerEvent()
-                        event.changes.forEach { it.consume() }
-                    } while (event.changes.any { it.pressed })
-                }
-            }
-    )
-}
-
-private val OpenPhotoEasing = Easing { fraction ->
-    1f - (1f - fraction) * (1f - fraction) * (1f - fraction) * (1f - fraction)
-}
-
-private fun lerp(start: Rect, stop: Rect, fraction: Float): Rect {
-    return Rect(
-        left = lerp(start.left, stop.left, fraction),
-        top = lerp(start.top, stop.top, fraction),
-        right = lerp(start.right, stop.right, fraction),
-        bottom = lerp(start.bottom, stop.bottom, fraction)
-    )
-}
-
-private fun lerp(start: Float, stop: Float, fraction: Float): Float {
-    return start + (stop - start) * fraction
 }
 
 private val DeleteBadgeTopPadding = 88.dp
