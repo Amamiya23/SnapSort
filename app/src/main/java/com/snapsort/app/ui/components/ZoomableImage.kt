@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import coil.compose.AsyncImage
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.size.Size
 import kotlin.math.abs
@@ -141,6 +142,7 @@ fun ZoomableImage(
                 .data(model)
                 .size(Size.ORIGINAL)
                 .allowHardware(false)
+                .memoryCachePolicy(CachePolicy.DISABLED)
                 .build()
         }
         AsyncImage(

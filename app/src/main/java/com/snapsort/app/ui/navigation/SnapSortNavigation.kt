@@ -95,7 +95,9 @@ fun SnapSortApp() {
                     navController.navigate("scan_progress")
                 },
                 onOpenGroup = { groupId ->
-                    navController.navigate("group_selection/$groupId")
+                    navController.navigate("group_selection/$groupId") {
+                        launchSingleTop = true
+                    }
                 },
                 onOpenSettings = { navController.navigate("settings") },
                 onDeleteConfirmed = { deleteViewModel.prepareDeleteRequest() },
