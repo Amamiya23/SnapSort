@@ -2,9 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEFAULT_APK="$ROOT_DIR/app/build/outputs/apk/release/app-release.apk"
+RELEASE_APK_DIR="$ROOT_DIR/app/build/outputs/apk/release"
 
-apk_path="${APK_PATH:-$DEFAULT_APK}"
+apk_path="${APK_PATH:-}"
 asset_label="${ASSET_LABEL:-}"
 repo="${GH_REPO:-}"
 release_notes="${RELEASE_NOTES:-}"
@@ -19,12 +19,13 @@ Usage: scripts/upload-release-apk.sh <tag> [--apk APK_PATH] [--repo OWNER/REPO] 
 Upload a compiled SnapSort APK to a GitHub Release using gh, with optional release notes update.
 If the release does not exist, the script creates it.
 If an asset with the same name already exists, the script overwrites it by default.
+By default, the latest app/build/outputs/apk/release/SnapSort-*.apk is uploaded.
 
 Arguments:
   tag                   Git tag for the target GitHub Release
 
 Options:
-  --apk APK_PATH        APK to upload (default: app/build/outputs/apk/release/app-release.apk)
+  --apk APK_PATH        APK to upload (default: latest release/SnapSort-*.apk)
   --repo OWNER/REPO     GitHub repository passed to gh --repo
   --label LABEL         Display label for the uploaded release asset
   --notes NOTES         Replace release notes with this text before uploading the APK
@@ -41,6 +42,34 @@ Environment:
   RELEASE_NOTES         Override release notes text
   RELEASE_NOTES_FILE    Override release notes file
 USAGE
+}
+
+find_latest_release_apk() {
+  local latest_apk=""
+  local nullglob_was_enabled=false
+
+  if shopt -q nullglob; then
+    nullglob_was_enabled=true
+  fi
+  shopt -s nullglob
+
+  for candidate in "$RELEASE_APK_DIR"/SnapSort-*.apk; do
+    if [[ -z "$latest_apk" || "$candidate" -nt "$latest_apk" ]]; then
+      latest_apk="$candidate"
+    fi
+  done
+
+  if [[ "$nullglob_was_enabled" == false ]]; then
+    shopt -u nullglob
+  fi
+
+  if [[ -z "$latest_apk" ]]; then
+    echo "No SnapSort-*.apk found in: $RELEASE_APK_DIR" >&2
+    echo "Build one first, for example: scripts/build-apk.sh --release" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "$latest_apk"
 }
 
 if [[ $# -eq 0 ]]; then
@@ -141,7 +170,9 @@ if [[ -n "$release_notes" && -n "$release_notes_file" ]]; then
   exit 2
 fi
 
-if [[ "$apk_path" != /* ]]; then
+if [[ -z "$apk_path" ]]; then
+  apk_path="$(find_latest_release_apk)"
+elif [[ "$apk_path" != /* ]]; then
   apk_path="$ROOT_DIR/$apk_path"
 fi
 

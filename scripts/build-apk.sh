@@ -13,6 +13,7 @@ usage() {
 Usage: scripts/build-apk.sh [--release|--debug] [--name VERSION_NAME]
 
 Build SnapSort with automatically generated Android version metadata.
+The APK is also copied to SnapSort-VERSION_NAME.apk in the build output directory.
 
 Options:
   --release              Build release APK (default)
@@ -98,3 +99,25 @@ echo "VERSION_NAME=${version_name}"
 
 cd "$ROOT_DIR"
 "${gradle_cmd[@]}" "$gradle_task" "-PVERSION_CODE=$version_code" "-PVERSION_NAME=$version_name"
+
+case "$build_type" in
+  release)
+    source_apk="$ROOT_DIR/app/build/outputs/apk/release/app-release.apk"
+    output_dir="$ROOT_DIR/app/build/outputs/apk/release"
+    ;;
+  debug)
+    source_apk="$ROOT_DIR/app/build/outputs/apk/debug/app-debug.apk"
+    output_dir="$ROOT_DIR/app/build/outputs/apk/debug"
+    ;;
+esac
+
+safe_version_name="${version_name//\//_}"
+named_apk="$output_dir/SnapSort-${safe_version_name}.apk"
+
+if [[ ! -f "$source_apk" ]]; then
+  echo "Expected APK not found: $source_apk" >&2
+  exit 1
+fi
+
+cp "$source_apk" "$named_apk"
+echo "APK: $named_apk"
